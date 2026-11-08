@@ -1,25 +1,46 @@
 // Cuentas y marcas de los datos de demostración (T13). Archivo sin secretos: lo usan
 // scripts/demo-datos.mjs (que crea los datos con service role) y la página /demo (T14).
 //
-// Todo lo que crea la demo queda marcado para poder borrarlo sin tocar nada ajeno:
-//   * correos @demo.handle-prueba.mx
-//   * organizaciones cuyo nombre empieza con "Demo · "
+// Todo lo que crea la demo queda marcado para poder borrarlo sin tocar nada ajeno, pero la
+// marca NO se ve en la app (T23):
+//   * correos @demo.handle-prueba.mx (personas, dueños de cada changarro y clientes)
+//   * metadatos del usuario de Auth: { demo_handle: true }
+//   * una organización es de la demo si tiene al menos un miembro y TODOS sus miembros son
+//     @demo.handle-prueba.mx (cada changarro de la demo tiene su propia cuenta de dueño).
+// Los nombres de organización ya no llevan prefijo. Las corridas viejas usaban "Demo · ": la
+// limpieza todavía reconoce ese prefijo para poder borrarlas.
 // Solo sintaxis que Node puede ejecutar sin compilar (sin enums ni alias de rutas).
 
 /** Dominio de todos los correos de la demo (personas y clientes de mostrador). */
 export const DOMINIO_DEMO = "demo.handle-prueba.mx";
 
-/** Prefijo de las organizaciones de la demo. El script de limpieza solo borra estas. */
-export const PREFIJO_ORG_DEMO = "Demo · ";
+/** Marca en user_metadata de las cuentas de Auth de la demo (no se muestra en la app). */
+export const METADATO_DEMO = "demo_handle";
+
+/**
+ * Prefijo que usaban las organizaciones de la demo hasta T23. Ya no se crea: solo sirve
+ * para que `demo:limpiar` reconozca (y borre) datos sembrados con la versión anterior.
+ */
+export const PREFIJO_ORG_DEMO_ANTERIOR = "Demo · ";
 
 /** ¿Este correo es de la demo? (sin distinguir mayúsculas). */
 export function esCorreoDemo(email: string | null | undefined): boolean {
   return !!email && email.trim().toLowerCase().endsWith(`@${DOMINIO_DEMO}`);
 }
 
-/** ¿Esta organización es de la demo? */
-export function esOrgDemo(nombre: string | null | undefined): boolean {
-  return !!nombre && nombre.startsWith(PREFIJO_ORG_DEMO);
+/**
+ * ¿Esta organización es de la demo? Lo decide quién la integra, no su nombre: al menos un
+ * miembro y todos con correo de la demo. Con la marca anterior (nombre "Demo · …") basta con
+ * que no tenga miembros ajenos.
+ */
+export function esOrgDemo(org: {
+  nombre?: string | null;
+  correosMiembros: readonly (string | null | undefined)[];
+}): boolean {
+  const todosDemo = org.correosMiembros.every((c) => esCorreoDemo(c));
+  if (!todosDemo) return false;
+  if (org.correosMiembros.length > 0) return true;
+  return !!org.nombre && org.nombre.startsWith(PREFIJO_ORG_DEMO_ANTERIOR);
 }
 
 export type ClaveCuentaDemo = "duena" | "cajero" | "cliente" | "red";
@@ -38,10 +59,18 @@ export type CuentaDemo = {
 
 /** Negocio de la dueña: es el que cobra en la caja durante la demo. */
 export const NEGOCIO_DUENA = "Abarrotes Doña Lupita";
-/** Organización (y negocio) de la dueña. */
-export const ORG_DUENA = `${PREFIJO_ORG_DEMO}${NEGOCIO_DUENA}`;
+/** Organización (y negocio) de la dueña: el mismo nombre que ve en la app. */
+export const ORG_DUENA = NEGOCIO_DUENA;
 /** Organización de la cuenta de la red Handle (admin_red). */
-export const ORG_RED = `${PREFIJO_ORG_DEMO}Red Handle`;
+export const ORG_RED = "Red Handle";
+
+/** Changarros de la demo con expediente "en revisión" (para mostrar la aprobación KYB en /red). */
+export const NEGOCIOS_EN_REVISION_DEMO = ["Cremería La Vaquita", "Pollería El Gallo de Oro"] as const;
+
+/** Correo de la cuenta dueña de cada changarro de la demo (salvo Doña Lupita, que es la dueña). */
+export function correoDuenoDemo(slug: string): string {
+  return `dueno.${slug}@${DOMINIO_DEMO}`;
+}
 
 /** Las cuatro cuentas con las que se entra a la demo, en el orden de los botones. */
 export const CUENTAS_DEMO: readonly CuentaDemo[] = [

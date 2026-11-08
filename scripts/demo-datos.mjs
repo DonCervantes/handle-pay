@@ -6,10 +6,15 @@
 //   node --env-file=.env scripts/demo-datos.mjs --conteos  # solo muestra cuántos datos de demo hay
 //   (atajos: bun run demo:datos, bun run demo:limpiar)
 //
-// Qué crea (todo marcado: correos @demo.handle-prueba.mx y organizaciones "Demo · …"):
+// Qué crea (todo marcado SIN que se vea en la app: correos @demo.handle-prueba.mx y
+// user_metadata.demo_handle en Auth; ver src/lib/demo.ts):
 //   * 12 changarros en Santa María la Ribera (CDMX), aprobados y activos (salen en /mapa),
 //     con pin, categorías variadas, horario, regla de puntos y 3 recomendados.
-//   * Cuentas: dueña (Abarrotes Doña Lupita), cajero, 3 clientes con cuenta, red (admin_red).
+//   * 2 changarros más con expediente "en revisión" y sus 4 documentos de ejemplo (PDF) en el
+//     bucket privado "kyb": la red los aprueba en vivo desde /red.
+//   * Cuentas: dueña (Abarrotes Doña Lupita), cajero, 3 clientes con cuenta, red (admin_red) y
+//     una cuenta de dueño por cada otro changarro (así cada organización tiene miembros de la
+//     demo y se reconoce sin ponerle un prefijo al nombre).
 //     Los correos y nombres están en src/lib/demo.ts (los usa también /demo).
 //   * ~30 días de cobros CoDi pagados (simulados) con clientes identificados: puntos,
 //     algunos canjes y niveles distintos (VIP, confianza, nuevo).
@@ -19,8 +24,10 @@
 //
 // Limpieza: el ledger de puntos es inmutable (trigger), así que el borrado completo usa el
 // Management API (SUPABASE_ACCESS_TOKEN + SUPABASE_PROJECT_ID) en UNA transacción que solo
-// toca organizaciones "Demo · …" cuyos miembros son todos @demo.handle-prueba.mx y clientes
-// @demo.handle-prueba.mx. Sin ese token, --limpiar al menos retira los negocios del mapa.
+// toca organizaciones con al menos un miembro y TODOS sus miembros @demo.handle-prueba.mx
+// (o, de corridas anteriores a T23, con nombre "Demo · …" y sin miembros ajenos) y clientes
+// @demo.handle-prueba.mx. Luego borra sus documentos del bucket "kyb" y sus usuarios de Auth.
+// Sin ese token, --limpiar al menos retira los negocios del mapa.
 //
 // Nunca imprime llaves. Solo corre con PAYMENTS_PROVIDER=mock (o sin definir).
 import { createClient } from "@supabase/supabase-js";
@@ -28,12 +35,16 @@ import {
   CLIENTES_EXTRA_DEMO,
   CUENTAS_DEMO,
   DOMINIO_DEMO,
+  METADATO_DEMO,
+  NEGOCIOS_EN_REVISION_DEMO,
   NEGOCIO_DUENA,
   ORG_DUENA,
   ORG_RED,
-  PREFIJO_ORG_DEMO,
+  PREFIJO_ORG_DEMO_ANTERIOR,
+  correoDuenoDemo,
   cuentaDemo,
   esCorreoDemo,
+  esOrgDemo,
 } from "../src/lib/demo.ts";
 import { VERSION_PRIVACIDAD, VERSION_TERMINOS } from "../src/lib/legal.ts";
 
@@ -117,6 +128,7 @@ function horario(tramos) {
 const NEGOCIOS = [
   {
     slug: "dona-lupita",
+    dueno: cuentaDemo("duena").nombre,
     nombre: NEGOCIO_DUENA,
     categoria: "abarrotes",
     direccion: "Sabino 154, Santa María la Ribera, Cuauhtémoc, CDMX",
@@ -129,6 +141,7 @@ const NEGOCIOS = [
   },
   {
     slug: "tacos-el-guero",
+    dueno: "Rubén Domínguez",
     nombre: "Tacos El Güero",
     categoria: "taqueria",
     direccion: "Jaime Torres Bodet 88, Santa María la Ribera, Cuauhtémoc, CDMX",
@@ -141,6 +154,7 @@ const NEGOCIOS = [
   },
   {
     slug: "tortilleria-la-esperanza",
+    dueno: "Esperanza Cruz",
     nombre: "Tortillería La Esperanza",
     categoria: "tortilleria",
     direccion: "Naranjo 210, Santa María la Ribera, Cuauhtémoc, CDMX",
@@ -153,6 +167,7 @@ const NEGOCIOS = [
   },
   {
     slug: "panaderia-la-espiga",
+    dueno: "Alfredo Medina",
     nombre: "Panadería La Espiga",
     categoria: "panaderia",
     direccion: "Dr. Atl 129, Santa María la Ribera, Cuauhtémoc, CDMX",
@@ -165,6 +180,7 @@ const NEGOCIOS = [
   },
   {
     slug: "carniceria-los-hermanos",
+    dueno: "Jesús Salgado",
     nombre: "Carnicería Los Hermanos",
     categoria: "carniceria",
     direccion: "Fresno 45, Santa María la Ribera, Cuauhtémoc, CDMX",
@@ -177,6 +193,7 @@ const NEGOCIOS = [
   },
   {
     slug: "fruteria-dona-chela",
+    dueno: "Graciela Rivas",
     nombre: "Frutería Doña Chela",
     categoria: "fruteria",
     direccion: "Pino 77, Santa María la Ribera, Cuauhtémoc, CDMX",
@@ -189,6 +206,7 @@ const NEGOCIOS = [
   },
   {
     slug: "miscelanea-el-kiosco",
+    dueno: "Patricia Gómez",
     nombre: "Miscelánea El Kiosco",
     categoria: "tienda",
     direccion: "Salvador Díaz Mirón 101, Santa María la Ribera, Cuauhtémoc, CDMX",
@@ -201,6 +219,7 @@ const NEGOCIOS = [
   },
   {
     slug: "abarrotes-san-cosme",
+    dueno: "Héctor Navarro",
     nombre: "Abarrotes San Cosme",
     categoria: "abarrotes",
     direccion: "Eligio Ancona 260, Santa María la Ribera, Cuauhtémoc, CDMX",
@@ -213,6 +232,7 @@ const NEGOCIOS = [
   },
   {
     slug: "taqueria-los-cuates",
+    dueno: "Omar Castillo",
     nombre: "Taquería Los Cuates",
     categoria: "taqueria",
     direccion: "Manuel Carpio 140, Santa María la Ribera, Cuauhtémoc, CDMX",
@@ -225,6 +245,7 @@ const NEGOCIOS = [
   },
   {
     slug: "papeleria-la-alameda",
+    dueno: "Lucía Mendoza",
     nombre: "Papelería La Alameda",
     categoria: "otro",
     direccion: "Santa María la Ribera 33, Santa María la Ribera, Cuauhtémoc, CDMX",
@@ -237,6 +258,7 @@ const NEGOCIOS = [
   },
   {
     slug: "panaderia-santa-maria",
+    dueno: "Marcos Ibarra",
     nombre: "Panadería Santa María",
     categoria: "panaderia",
     direccion: "Cedro 312, Santa María la Ribera, Cuauhtémoc, CDMX",
@@ -249,6 +271,7 @@ const NEGOCIOS = [
   },
   {
     slug: "recauderia-el-huerto",
+    dueno: "Teresa Luna",
     nombre: "Recaudería El Huerto",
     categoria: "fruteria",
     direccion: "Amado Nervo 58, Santa María la Ribera, Cuauhtémoc, CDMX",
@@ -259,6 +282,46 @@ const NEGOCIOS = [
     horario: horario([[0, 5, "07:30", "19:30"], [6, 6, "08:00", "15:00"]]),
     cobrosPorDia: [0, 1],
   },
+];
+
+/**
+ * Changarros con expediente completo "en revisión" (T23): la red los aprueba en vivo.
+ * Datos fiscales genéricos (RFC de público en general y una CURP de ejemplo): no son de nadie.
+ * Ya traen pin para que, aunque falle la geocodificación al aprobar, salgan en el mapa.
+ */
+const NEGOCIOS_EN_REVISION = [
+  {
+    slug: "cremeria-la-vaquita",
+    nombre: NEGOCIOS_EN_REVISION_DEMO[0],
+    dueno: "María Castañeda",
+    categoria: "tienda",
+    direccion: "Ciprés 98, Santa María la Ribera, Cuauhtémoc, CDMX",
+    telefono: "5550142233",
+    lat: 19.45263,
+    lng: -99.15958,
+    regla: { porcentaje: 5, tope: 25, vigencia: 180, canje: 50 },
+    horario: horario([[0, 5, "08:00", "20:00"], [6, 6, "09:00", "14:00"]]),
+  },
+  {
+    slug: "polleria-el-gallo-de-oro",
+    nombre: NEGOCIOS_EN_REVISION_DEMO[1],
+    dueno: "Ramón Aguilar",
+    categoria: "carniceria",
+    direccion: "Olivo 41, Santa María la Ribera, Cuauhtémoc, CDMX",
+    telefono: "5550187744",
+    lat: 19.44958,
+    lng: -99.16074,
+    regla: { porcentaje: 4, tope: 30, vigencia: 120, canje: 40 },
+    horario: horario([[0, 5, "08:00", "18:00"], [6, 6, "08:00", "15:00"]]),
+  },
+];
+const RFC_GENERICO = "XAXX010101000";
+const CURP_EJEMPLO = "XEXX010101HDFXXX04";
+const DOCUMENTOS_KYB = [
+  ["ine", "Identificación oficial (INE)"],
+  ["constancia_fiscal", "Constancia de situación fiscal"],
+  ["comprobante_domicilio", "Comprobante de domicilio del negocio"],
+  ["titularidad_cuenta", "Estado de cuenta bancario (primera hoja)"],
 ];
 
 // Clientes de mostrador sin cuenta (la caja los identificó por correo). Dan "clientes recurrentes".
@@ -345,7 +408,8 @@ async function asegurarUsuario(email, metadatos, { invitacionCajero } = {}) {
   const { error } = await db.auth.admin.createUser({
     email,
     email_confirm: true,
-    user_metadata: { ...metadatos, ...LEGAL },
+    // La marca de la demo va en los metadatos (no se muestra en ninguna pantalla).
+    user_metadata: { ...metadatos, ...LEGAL, [METADATO_DEMO]: true },
   });
   if (error) falla(`Crear ${email}`, error);
   const nuevo = await perfilPorCorreo(email);
@@ -356,28 +420,27 @@ async function asegurarUsuario(email, metadatos, { invitacionCajero } = {}) {
 // ---------------------------------------------------------------------------
 // Organizaciones y negocios
 // ---------------------------------------------------------------------------
-async function asegurarOrg(nombre) {
-  const { data: existentes, error } = await db.from("organizations").select("id").eq("name", nombre);
-  if (error) falla(`Leer organización ${nombre}`, error);
-  if (existentes.length) return existentes[0].id;
-  const { data, error: e2 } = await db.from("organizations").insert({ name: nombre }).select("id").single();
-  if (e2) falla(`Crear organización ${nombre}`, e2);
-  // Lo mismo que seed_demo_data() le da a una org nueva: los cobros se ligan a "Cuenta CoDi".
-  const { error: e3 } = await db.from("accounts").insert([
-    { org_id: data.id, name: "Caja", type: "efectivo" },
-    { org_id: data.id, name: "Cuenta CoDi", type: "banco" },
-  ]);
-  if (e3) falla(`Cuentas de ${nombre}`, e3);
-  return data.id;
+/**
+ * Cuenta dueña de un changarro de la demo: el alta (trigger handle_new_user) crea la
+ * organización con el nombre del negocio, sin prefijo, y sus cuentas "Caja" y "Cuenta CoDi".
+ * Que todos sus miembros sean @demo.handle-prueba.mx es lo que la marca como de la demo.
+ */
+async function asegurarDueno(n) {
+  const email = correoDuenoDemo(n.slug);
+  const p = await asegurarUsuario(email, { full_name: n.dueno, tipo_cuenta: "negocio", org_name: n.nombre });
+  if (!p.org_id || p.role !== "owner") {
+    throw new Error(`${email} existe pero no es dueño de una organización; revisa a mano.`);
+  }
+  return p.org_id;
 }
 
 async function asegurarNegocio(orgId, n) {
   const fila = {
     org_id: orgId,
     nombre_comercial: n.nombre,
-    razon_social: `${n.nombre} (demostración)`,
+    razon_social: n.dueno,
     tipo_persona: "fisica",
-    rfc: "XAXX010101000",
+    rfc: RFC_GENERICO,
     categoria: n.categoria,
     direccion: n.direccion,
     cp: "06400",
@@ -435,6 +498,144 @@ async function asegurarNegocio(orgId, n) {
     }
   }
   return data.id;
+}
+
+/**
+ * PDF de una página con texto (Helvetica, WinAnsi). Basta para que la red abra cada documento
+ * del expediente desde /red/$id. Dice claramente que es un ejemplo sin valor oficial.
+ */
+function pdfDeEjemplo(lineas) {
+  const esc = (t) => t.replace(/[\\()]/g, (c) => `\\${c}`);
+  const texto = [
+    "0.85 0.2 0.2 RG 3 w 30 30 552 336 re S",
+    "BT /F1 18 Tf 50 330 Td",
+    `(${esc(lineas[0])}) Tj`,
+    "/F1 12 Tf 0 -30 Td",
+    ...lineas.slice(1).flatMap((l) => [`(${esc(l)}) Tj`, "0 -22 Td"]),
+    "ET",
+  ].join("\n");
+  const contenido = Buffer.from(texto, "latin1");
+  const objetos = [
+    Buffer.from("<< /Type /Catalog /Pages 2 0 R >>", "latin1"),
+    Buffer.from("<< /Type /Pages /Kids [3 0 R] /Count 1 >>", "latin1"),
+    Buffer.from(
+      "<< /Type /Page /Parent 2 0 R /MediaBox [0 0 612 396] /Resources << /Font << /F1 4 0 R >> >> /Contents 5 0 R >>",
+      "latin1",
+    ),
+    Buffer.from("<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica /Encoding /WinAnsiEncoding >>", "latin1"),
+    Buffer.concat([
+      Buffer.from(`<< /Length ${contenido.length} >>\nstream\n`, "latin1"),
+      contenido,
+      Buffer.from("\nendstream", "latin1"),
+    ]),
+  ];
+  const partes = [Buffer.from("%PDF-1.4\n", "latin1")];
+  const offsets = [];
+  let largo = partes[0].length;
+  objetos.forEach((cuerpo, i) => {
+    offsets.push(largo);
+    const obj = Buffer.concat([
+      Buffer.from(`${i + 1} 0 obj\n`, "latin1"),
+      cuerpo,
+      Buffer.from("\nendobj\n", "latin1"),
+    ]);
+    partes.push(obj);
+    largo += obj.length;
+  });
+  const xref = [
+    "xref",
+    `0 ${objetos.length + 1}`,
+    "0000000000 65535 f ",
+    ...offsets.map((o) => `${String(o).padStart(10, "0")} 00000 n `),
+    "trailer",
+    `<< /Size ${objetos.length + 1} /Root 1 0 R >>`,
+    "startxref",
+    String(largo),
+    "%%EOF",
+    "",
+  ].join("\n");
+  partes.push(Buffer.from(xref, "latin1"));
+  return Buffer.concat(partes);
+}
+
+/**
+ * Changarro con expediente completo esperando a la red: datos, regla de puntos, los 4
+ * documentos (PDF de ejemplo en el bucket "kyb") y el envío a revisión. Si ya existe y no
+ * está en borrador (p. ej. la red ya lo aprobó en un ensayo) no se toca: para volver a
+ * mostrar la aprobación, `demo:limpiar && demo:datos`.
+ */
+async function asegurarNegocioEnRevision(orgId, n) {
+  const { data: existente, error: e0 } = await db
+    .from("businesses")
+    .select("id, estado_kyb")
+    .eq("org_id", orgId)
+    .maybeSingle();
+  if (e0) falla(`Leer negocio ${n.nombre}`, e0);
+  if (existente && existente.estado_kyb !== "borrador") return existente.id;
+
+  let businessId = existente?.id;
+  if (!businessId) {
+    const { data, error } = await db
+      .from("businesses")
+      .insert({
+        org_id: orgId,
+        nombre_comercial: n.nombre,
+        razon_social: n.dueno,
+        tipo_persona: "fisica",
+        rfc: RFC_GENERICO,
+        curp: CURP_EJEMPLO,
+        telefono: n.telefono,
+        categoria: n.categoria,
+        direccion: n.direccion,
+        cp: "06400",
+        lat: n.lat,
+        lng: n.lng,
+        horario: n.horario,
+        estado_kyb: "borrador",
+        activo: false,
+        recomendado: false,
+      })
+      .select("id")
+      .single();
+    if (error) falla(`Negocio ${n.nombre}`, error);
+    businessId = data.id;
+
+    const { error: e1 } = await db.from("point_rules").insert({
+      org_id: orgId,
+      business_id: businessId,
+      porcentaje: n.regla.porcentaje,
+      tope_puntos: n.regla.tope,
+      vigencia_dias: n.regla.vigencia,
+      canje_max_porcentaje: n.regla.canje,
+      activo: true,
+    });
+    if (e1) falla(`Regla de puntos de ${n.nombre}`, e1);
+  }
+
+  for (const [tipo, titulo] of DOCUMENTOS_KYB) {
+    const ruta = `${orgId}/${tipo}-ejemplo.pdf`;
+    const pdf = pdfDeEjemplo([
+      titulo,
+      "DOCUMENTO DE EJEMPLO - SIN VALOR OFICIAL",
+      `Negocio: ${n.nombre}`,
+      `Titular: ${n.dueno}`,
+      `Domicilio: ${n.direccion}`,
+      "Archivo de muestra para la revisión de expedientes en Handle.",
+    ]);
+    const { error: eS } = await db.storage
+      .from("kyb")
+      .upload(ruta, pdf, { contentType: "application/pdf", upsert: true });
+    if (eS) falla(`Subir ${tipo} de ${n.nombre}`, eS);
+    const { error: eD } = await db
+      .from("kyb_documents")
+      .upsert({ business_id: businessId, org_id: orgId, tipo, storage_path: ruta }, { onConflict: "business_id,tipo" });
+    if (eD) falla(`Documento ${tipo} de ${n.nombre}`, eD);
+  }
+
+  // El trigger validar_envio_kyb exige los 4 documentos: si falta alguno, esto falla.
+  const { error: eR } = await db.from("businesses").update({ estado_kyb: "en_revision" }).eq("id", businessId);
+  if (eR) falla(`Enviar a revisión ${n.nombre}`, eR);
+  return businessId;
 }
 
 // ---------------------------------------------------------------------------
@@ -591,9 +792,38 @@ async function pagarYFechar(chargeId, monto, cuando, llave) {
 // ---------------------------------------------------------------------------
 // Conteos
 // ---------------------------------------------------------------------------
+/**
+ * Organizaciones de la demo (misma regla que SQL_ORGS_DEMO y que esOrgDemo de src/lib/demo.ts):
+ * al menos un miembro y todos @demo.handle-prueba.mx, o el nombre con la marca anterior a T23
+ * sin miembros ajenos.
+ */
+async function orgsDemo() {
+  const { data: miembrosDemo, error } = await db
+    .from("profiles")
+    .select("org_id")
+    .like("email", `%@${DOMINIO_DEMO}`)
+    .not("org_id", "is", null);
+  if (error) falla("Leer perfiles de demo", error);
+  const { data: anteriores, error: e2 } = await db
+    .from("organizations")
+    .select("id")
+    .like("name", `${PREFIJO_ORG_DEMO_ANTERIOR}%`);
+  if (e2) falla("Leer organizaciones de demo", e2);
+  const candidatas = [...new Set([...miembrosDemo.map((p) => p.org_id), ...anteriores.map((o) => o.id)])];
+  if (!candidatas.length) return [];
+  const { data: orgs, error: e3 } = await db.from("organizations").select("id, name").in("id", candidatas);
+  if (e3) falla("Leer organizaciones candidatas", e3);
+  const { data: miembros, error: e4 } = await db.from("profiles").select("org_id, email").in("org_id", candidatas);
+  if (e4) falla("Leer miembros de organizaciones candidatas", e4);
+  return orgs
+    .filter((o) =>
+      esOrgDemo({ nombre: o.name, correosMiembros: miembros.filter((m) => m.org_id === o.id).map((m) => m.email) }),
+    )
+    .map((o) => o.id);
+}
+
 async function conteos() {
-  const { data: orgs } = await db.from("organizations").select("id").like("name", `${PREFIJO_ORG_DEMO}%`);
-  const orgIds = (orgs ?? []).map((o) => o.id);
+  const orgIds = await orgsDemo();
   const contar = async (tabla, filtro) => {
     const q = db.from(tabla).select("*", { count: "exact", head: true });
     const { count, error } = await filtro(q);
@@ -608,6 +838,8 @@ async function conteos() {
     perfiles: await contar("profiles", (q) => q.like("email", `%@${DOMINIO_DEMO}`)),
     clientes: await contar("customers", (q) => q.like("email", `%@${DOMINIO_DEMO}`)),
     negocios: await contar("businesses", enOrgs),
+    enRevision: await contar("businesses", (q) => enOrgs(q).eq("estado_kyb", "en_revision")),
+    documentosKyb: await contar("kyb_documents", enOrgs),
     enMapa: (mapa ?? []).filter((n) => nombres.has(n.nombre_comercial)).length,
     recomendados: (mapa ?? []).filter((n) => nombres.has(n.nombre_comercial) && n.recomendado).length,
     reglas: await contar("point_rules", enOrgs),
@@ -621,6 +853,19 @@ async function conteos() {
 // Crear / completar
 // ---------------------------------------------------------------------------
 async function sembrar() {
+  // Datos sembrados antes de T23 (organizaciones "Demo · …"): mezclarlos con los nuevos
+  // duplicaría los changarros. Se piden limpiar primero.
+  const { data: anteriores } = await db
+    .from("organizations")
+    .select("id")
+    .like("name", `${PREFIJO_ORG_DEMO_ANTERIOR}%`)
+    .limit(1);
+  if (anteriores?.length) {
+    throw new Error(
+      `Hay datos de demo con la marca anterior ("${PREFIJO_ORG_DEMO_ANTERIOR}…"). Corre primero: npx bun run demo:limpiar`,
+    );
+  }
+
   console.log("Cuentas de la demo…");
   const duena = cuentaDemo("duena");
   const pDuena = await asegurarUsuario(duena.email, {
@@ -661,9 +906,14 @@ async function sembrar() {
 
   console.log("Changarros…");
   for (const n of NEGOCIOS) {
-    const orgId = n.slug === "dona-lupita" ? pDuena.org_id : await asegurarOrg(`${PREFIJO_ORG_DEMO}${n.nombre}`);
+    const orgId = n.slug === "dona-lupita" ? pDuena.org_id : await asegurarDueno(n);
     ids.orgs[n.slug] = orgId;
     ids.negocios[n.slug] = await asegurarNegocio(orgId, n);
+  }
+
+  console.log("Expedientes en revisión (con documentos de ejemplo)…");
+  for (const n of NEGOCIOS_EN_REVISION) {
+    await asegurarNegocioEnRevision(await asegurarDueno(n), n);
   }
 
   console.log("Cobros de los últimos 30 días…");
@@ -729,10 +979,19 @@ async function sqlAdmin(query, contexto) {
   return true;
 }
 
-/** Organizaciones "Demo · …" en las que TODOS sus miembros son de la demo (SQL). */
+/**
+ * Organizaciones de la demo (SQL; misma regla que orgsDemo()): con algún miembro de la demo
+ * (o con el nombre de la marca anterior "Demo · …") y SIN ningún miembro ajeno.
+ */
 const SQL_ORGS_DEMO = `
   select o.id from public.organizations o
-   where o.name like '${PREFIJO_ORG_DEMO}%'
+   where (
+       o.name like '${PREFIJO_ORG_DEMO_ANTERIOR}%'
+       or exists (
+         select 1 from public.profiles p
+          where p.org_id = o.id and lower(p.email) like '%@${DOMINIO_DEMO}'
+       )
+     )
      and not exists (
        select 1 from public.profiles p
         where p.org_id = o.id and (p.email is null or lower(p.email) not like '%@${DOMINIO_DEMO}')
@@ -765,7 +1024,7 @@ commit;
 // ---------------------------------------------------------------------------
 const SQL_LIMPIEZA = `
 begin;
--- Solo organizaciones "Demo · …" en las que TODOS sus miembros son de la demo.
+-- Solo organizaciones de la demo (ver SQL_ORGS_DEMO): ningún miembro ajeno.
 create temp table _orgs_demo on commit drop as ${SQL_ORGS_DEMO};
 create temp table _clientes_demo on commit drop as
   select id from public.customers where lower(email) like '%@${DOMINIO_DEMO}';
@@ -792,8 +1051,7 @@ commit;
 
 async function limpiar() {
   // 1) Lo mínimo, con service role: que nada de la demo quede en el mapa.
-  const { data: orgs } = await db.from("organizations").select("id").like("name", `${PREFIJO_ORG_DEMO}%`);
-  const orgIds = (orgs ?? []).map((o) => o.id);
+  const orgIds = await orgsDemo();
   if (orgIds.length) {
     const { error } = await db.from("businesses").update({ activo: false, recomendado: false }).in("org_id", orgIds);
     if (error) falla("Retirar negocios del mapa", error);
@@ -808,6 +1066,19 @@ async function limpiar() {
     return;
   }
   console.log("Datos de demo borrados de la base.");
+
+  // 2b) Documentos KYB de esas organizaciones en Storage (carpeta = org_id).
+  let archivos = 0;
+  for (const orgId of orgIds) {
+    const { data: lista, error } = await db.storage.from("kyb").list(orgId, { limit: 1000 });
+    if (error) falla("Listar documentos KYB de demo", error);
+    const rutas = (lista ?? []).filter((f) => f.id).map((f) => `${orgId}/${f.name}`);
+    if (!rutas.length) continue;
+    const { error: e2 } = await db.storage.from("kyb").remove(rutas);
+    if (e2) falla("Borrar documentos KYB de demo", e2);
+    archivos += rutas.length;
+  }
+  console.log(`${archivos} documentos KYB de demo borrados de Storage.`);
 
   // 3) Usuarios de Auth con correo de demo (sus perfiles ya no existen).
   const usuarios = await usuariosAuthDemo();
