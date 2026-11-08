@@ -149,6 +149,33 @@ No toca los archivos de la Fase 4.
 - `lat` y `lng` se llenan al aprobar el KYB (`src/lib/geocoding.server.ts`, Nominatim).
 - Si las coordenadas fallan, se usa el código postal.
 
+#### Estado Fase 5 (rama `fase-5-mapa`, sin aplicar en la base)
+
+Código listo de HND-050 a 053; **ningún ticket con ✅** hasta aplicar la migración y probar en navegador.
+
+- **Migración** `supabase/migrations/20261108030000_mapa_publico.sql` (**NO aplicada**): función `negocios_publicos()` *security definer*, ejecutable por `anon` y `authenticated`. Lista blanca: `id`, `nombre_comercial`, `categoria`, `direccion`, `lat`, `lng`, `horario`, `recomendado` y `puntos_porcentaje` (regla de puntos activa), solo de negocios `aprobado` + `activo`. Nunca RFC, CURP, razón social, teléfono, CP, `org_id` ni datos bancarios. Se eligió función y no vista porque una vista con permisos del dueño es un error del advisor de Supabase.
+- **Prueba SQL:** `supabase/tests/mapa_publico.sql` (termina en `raise exception 'OK'`, se revierte). Cubre columnas expuestas, filtro aprobado/activo, que anon no lea `businesses`, que el dueño no se pueda recomendar, que la red sí y que un borrador no pueda ser recomendado.
+- **Tipos:** `negocios_publicos` agregado a mano en `src/integrations/supabase/types.ts`; **regenerarlos** después de aplicar.
+- **Rutas públicas:** `/mapa` (mapa + lista, filtros `?categoria=` y `?recomendados=true` en la URL) y `/mapa/$id` (perfil: categoría, dirección, cómo llegar, horario, promoción de puntos). Declaradas en `RUTAS_PUBLICAS` de `src/lib/roles.ts`; un test falla si una ruta fuera de `_authenticated` y `/api` no está declarada.
+- **MapLibre** se carga con `import()` dentro de un efecto (`src/components/mapa-negocios.tsx`): nunca corre en SSR. Teselas raster de `tile.openstreetmap.org` con atribución.
+- **HND-053:** server function `marcarRecomendado` (`src/lib/mapa.functions.ts`, `exigirRol(["admin_red"])` + RLS + trigger `guard_business_write`), con switch en `/red/$id` y estrella en `/red`. Recomendados: pin dorado con ★, primero en la lista y filtro "Recomendados".
+- **Lógica pura** en `src/lib/mapa.ts` con pruebas en `src/test/mapa.test.ts`.
+
+**Para cerrar la fase:**
+
+1. Avisar y aplicar la migración.
+2. Correr `supabase/tests/mapa_publico.sql`: debe responder `ERROR: OK`.
+3. Regenerar tipos y correr advisors. Es esperable un aviso por función *security definer* ejecutable por `anon`: es intencional.
+4. E2E: aprobar un negocio en `/red`, verlo en `/mapa` sin sesión, filtrar, abrir el perfil desde el pin, recomendarlo y ver la estrella.
+5. Marcar ✅ HND-050 a 053.
+
+**Decisiones abiertas:**
+
+- **Teléfono:** no se publica porque puede ser el celular personal del dueño. Si se quiere mostrar, que sea un campo aparte y opcional, como "teléfono público".
+- **`horario`:** no hay pantalla para capturarlo (la UI acepta texto o `{ "lun-sab": "8:00-21:00" }`).
+- **Dirección:** se publica la `direccion` del expediente, que es la del comprobante de domicilio **del negocio**. Hay que confirmar que nunca sea un domicilio particular.
+- **Teselas en producción:** con tráfico real hay que mover las teselas a un proveedor, porque la política de OSM limita el uso intensivo.
+
 ### Fase 6 · Lanzamiento
 
 | Ticket | Qué es |
