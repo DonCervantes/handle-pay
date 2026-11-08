@@ -139,6 +139,8 @@ Reglas que suben el nivel según historial; afectan beneficios.
 
 ## FASE 5 — Mapa y descubrimiento
 
+> Estado: HND-050 a 053 con código listo en la rama `fase-5-mapa` (ver `05-estado-del-proyecto.md` §4). **Sin ✅ todavía:** falta aplicar la migración `20261108030000_mapa_publico.sql` y verificar en navegador con negocios reales.
+
 ### HND-050 · Mapa público con MapLibre + tiles OSM `mapa` `ui`
 Render del mapa con pines de negocios `aprobado + activo`.
 **Aceptación:** se ven los pines con coordenadas reales.

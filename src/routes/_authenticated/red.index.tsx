@@ -56,7 +56,7 @@ function ColaDeRevision() {
     queryFn: async () => {
       const { data, error } = await supabase
         .from("businesses")
-        .select("id, nombre_comercial, categoria, estado_kyb, updated_at, lat, activo")
+        .select("id, nombre_comercial, categoria, estado_kyb, updated_at, lat, activo, recomendado")
         .order("updated_at", { ascending: true });
       if (error) throw error;
       return data;
@@ -126,7 +126,14 @@ function ColaDeRevision() {
             {visibles.map((n) => (
               <TableRow key={n.id}>
                 <TableCell>
-                  <p className="font-medium">{n.nombre_comercial}</p>
+                  <p className="font-medium">
+                    {n.nombre_comercial}
+                    {n.recomendado && (
+                      <span className="ml-1 text-amber-500" title="Recomendado en el mapa">
+                        ★
+                      </span>
+                    )}
+                  </p>
                   <p className="text-xs text-muted-foreground">{etiquetaCategoria(n.categoria)}</p>
                 </TableCell>
                 <TableCell>

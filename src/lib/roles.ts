@@ -79,6 +79,19 @@ const ACCESO: readonly { ruta: string; roles: readonly Rol[] }[] = [
   { ruta: "/configuracion", roles: ROLES_PERSONAL },
 ];
 
+/**
+ * Páginas públicas: se abren sin sesión (viven fuera de _authenticated). También
+ * se declaran aquí para que ninguna pantalla quede pública por accidente (lo
+ * verifica un test). "/" cubre solo el inicio; las demás, sus subrutas.
+ * Nunca leen tablas con datos sensibles: el mapa usa negocios_publicos().
+ */
+const RUTAS_PUBLICAS: readonly string[] = ["/", "/auth", "/mapa"];
+
+export function esRutaPublica(ruta: string): boolean {
+  const limpia = ruta.length > 1 ? ruta.replace(/\/+$/, "") : ruta;
+  return RUTAS_PUBLICAS.some((r) => limpia === r || (r !== "/" && limpia.startsWith(`${r}/`)));
+}
+
 /** Regla que aplica a una ruta, o undefined si no tiene (= nadie entra). */
 export function reglaDeRuta(ruta: string) {
   const limpia = ruta.length > 1 ? ruta.replace(/\/+$/, "") : ruta;

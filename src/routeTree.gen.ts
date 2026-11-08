@@ -21,6 +21,8 @@ import { Route as AuthenticatedFinanzasRouteImport } from './routes/_authenticat
 import { Route as AuthenticatedMonederoRouteImport } from './routes/_authenticated/monedero'
 import { Route as AuthenticatedNegocioRouteImport } from './routes/_authenticated/negocio'
 import { Route as AuthenticatedPagosRouteImport } from './routes/_authenticated/pagos'
+import { Route as MapaIndexRouteImport } from './routes/mapa.index'
+import { Route as MapaIdRouteImport } from './routes/mapa.$id'
 import { Route as AuthenticatedClientesIndexRouteImport } from './routes/_authenticated/clientes.index'
 import { Route as AuthenticatedClientesIdRouteImport } from './routes/_authenticated/clientes.$id'
 import { Route as AuthenticatedRedIndexRouteImport } from './routes/_authenticated/red.index'
@@ -91,6 +93,16 @@ const AuthenticatedPagosRoute = AuthenticatedPagosRouteImport.update({
   path: '/pagos',
   getParentRoute: () => AuthenticatedRouteRoute,
 } as any)
+const MapaIndexRoute = MapaIndexRouteImport.update({
+  id: '/mapa/',
+  path: '/mapa/',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const MapaIdRoute = MapaIdRouteImport.update({
+  id: '/mapa/$id',
+  path: '/mapa/$id',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const AuthenticatedClientesIndexRoute =
   AuthenticatedClientesIndexRouteImport.update({
     id: '/clientes/',
@@ -145,6 +157,8 @@ export interface FileRoutesByFullPath {
   '/monedero': typeof AuthenticatedMonederoRoute
   '/negocio': typeof AuthenticatedNegocioRoute
   '/pagos': typeof AuthenticatedPagosRoute
+  '/mapa/$id': typeof MapaIdRoute
+  '/mapa/': typeof MapaIndexRoute
   '/clientes/$id': typeof AuthenticatedClientesIdRoute
   '/red/$id': typeof AuthenticatedRedIdRoute
   '/api/v1/clients': typeof ApiV1ClientsRoute
@@ -166,6 +180,8 @@ export interface FileRoutesByTo {
   '/monedero': typeof AuthenticatedMonederoRoute
   '/negocio': typeof AuthenticatedNegocioRoute
   '/pagos': typeof AuthenticatedPagosRoute
+  '/mapa/$id': typeof MapaIdRoute
+  '/mapa': typeof MapaIndexRoute
   '/clientes/$id': typeof AuthenticatedClientesIdRoute
   '/red/$id': typeof AuthenticatedRedIdRoute
   '/api/v1/clients': typeof ApiV1ClientsRoute
@@ -189,6 +205,8 @@ export interface FileRoutesById {
   '/_authenticated/monedero': typeof AuthenticatedMonederoRoute
   '/_authenticated/negocio': typeof AuthenticatedNegocioRoute
   '/_authenticated/pagos': typeof AuthenticatedPagosRoute
+  '/mapa/$id': typeof MapaIdRoute
+  '/mapa/': typeof MapaIndexRoute
   '/_authenticated/clientes/$id': typeof AuthenticatedClientesIdRoute
   '/_authenticated/red/$id': typeof AuthenticatedRedIdRoute
   '/api/v1/clients': typeof ApiV1ClientsRoute
@@ -212,6 +230,8 @@ export interface FileRouteTypes {
     | '/monedero'
     | '/negocio'
     | '/pagos'
+    | '/mapa/$id'
+    | '/mapa/'
     | '/clientes/$id'
     | '/red/$id'
     | '/api/v1/clients'
@@ -233,6 +253,8 @@ export interface FileRouteTypes {
     | '/monedero'
     | '/negocio'
     | '/pagos'
+    | '/mapa/$id'
+    | '/mapa'
     | '/clientes/$id'
     | '/red/$id'
     | '/api/v1/clients'
@@ -255,6 +277,8 @@ export interface FileRouteTypes {
     | '/_authenticated/monedero'
     | '/_authenticated/negocio'
     | '/_authenticated/pagos'
+    | '/mapa/$id'
+    | '/mapa/'
     | '/_authenticated/clientes/$id'
     | '/_authenticated/red/$id'
     | '/api/v1/clients'
@@ -269,6 +293,8 @@ export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
   AuthenticatedRouteRoute: typeof AuthenticatedRouteRouteWithChildren
   AuthRoute: typeof AuthRoute
+  MapaIdRoute: typeof MapaIdRoute
+  MapaIndexRoute: typeof MapaIndexRoute
   ApiV1ClientsRoute: typeof ApiV1ClientsRoute
   ApiV1PaymentsRoute: typeof ApiV1PaymentsRoute
   ApiV1TransactionsRoute: typeof ApiV1TransactionsRoute
@@ -360,6 +386,20 @@ declare module '@tanstack/react-router' {
       fullPath: '/pagos'
       preLoaderRoute: typeof AuthenticatedPagosRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
+    }
+    '/mapa/': {
+      id: '/mapa/'
+      path: '/mapa'
+      fullPath: '/mapa/'
+      preLoaderRoute: typeof MapaIndexRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/mapa/$id': {
+      id: '/mapa/$id'
+      path: '/mapa/$id'
+      fullPath: '/mapa/$id'
+      preLoaderRoute: typeof MapaIdRouteImport
+      parentRoute: typeof rootRouteImport
     }
     '/_authenticated/clientes/': {
       id: '/_authenticated/clientes/'
@@ -459,6 +499,8 @@ const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   AuthenticatedRouteRoute: AuthenticatedRouteRouteWithChildren,
   AuthRoute: AuthRoute,
+  MapaIdRoute: MapaIdRoute,
+  MapaIndexRoute: MapaIndexRoute,
   ApiV1ClientsRoute: ApiV1ClientsRoute,
   ApiV1PaymentsRoute: ApiV1PaymentsRoute,
   ApiV1TransactionsRoute: ApiV1TransactionsRoute,

@@ -1,7 +1,14 @@
 import { QueryClient } from "@tanstack/react-query";
 import { createRouter } from "@tanstack/react-router";
 import { describe, expect, it } from "vitest";
-import { inicioPorRol, marcoPorRol, puedeEntrar, reglaDeRuta, type Rol } from "@/lib/roles";
+import {
+  esRutaPublica,
+  inicioPorRol,
+  marcoPorRol,
+  puedeEntrar,
+  reglaDeRuta,
+  type Rol,
+} from "@/lib/roles";
 import { routeTree } from "@/routeTree.gen";
 
 const TODOS: Rol[] = ["owner", "admin", "finance", "hr", "sales", "cajero", "admin_red", "cliente"];
@@ -144,5 +151,56 @@ describe("cobertura de rutas", () => {
       sinRegla,
       `Rutas privadas sin regla en src/lib/roles.ts: ${sinRegla.join(", ")}`,
     ).toEqual([]);
+  });
+
+  it("toda pantalla fuera de la sesión está declarada como pública", () => {
+    // Las rutas /api/* son endpoints de servidor con su propia autenticación (API key o firma).
+    const router = createRouter({ routeTree, context: { queryClient: new QueryClient() } });
+    const publicas = Object.values(router.routesById)
+      .filter(
+        (r) =>
+          r.id !== "__root__" &&
+          r.id !== "/_authenticated" &&
+          !r.id.startsWith("/_authenticated/") &&
+          !r.id.startsWith("/api/"),
+      )
+      .map((r) => r.fullPath);
+
+    expect(publicas).toContain("/mapa/");
+    const sinDeclarar = publicas.filter((ruta) => !esRutaPublica(ruta));
+    expect(
+      sinDeclarar,
+      `Rutas públicas no declaradas en RUTAS_PUBLICAS (src/lib/roles.ts): ${sinDeclarar.join(", ")}`,
+    ).toEqual([]);
+  });
+});
+
+describe("esRutaPublica", () => {
+  it("el mapa y el perfil de negocio son públicos", () => {
+    expect(esRutaPublica("/mapa")).toBe(true);
+    expect(esRutaPublica("/mapa/")).toBe(true);
+    expect(esRutaPublica("/mapa/123")).toBe(true);
+    expect(esRutaPublica("/")).toBe(true);
+    expect(esRutaPublica("/auth")).toBe(true);
+  });
+
+  it("niega por defecto: lo privado y lo desconocido no es público", () => {
+    for (const ruta of [
+      "/dashboard",
+      "/red",
+      "/negocio",
+      "/caja",
+      "/monedero",
+      "/mapas",
+      "/secreto",
+    ]) {
+      expect(esRutaPublica(ruta), ruta).toBe(false);
+    }
+  });
+
+  it("ninguna ruta es pública y privada a la vez", () => {
+    for (const ruta of ["/", "/auth", "/mapa", "/mapa/123"]) {
+      expect(reglaDeRuta(ruta), ruta).toBeUndefined();
+    }
   });
 });
