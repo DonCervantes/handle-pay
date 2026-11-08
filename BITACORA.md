@@ -61,6 +61,24 @@ Así se ha trabajado en este repo; síguela para que los dos trabajemos igual.
 
 ---
 
+## 2026-11-07 · Integrado agente-1: T1 suite E2E con Playwright
+
+- **Commit `898c943`.** Archivos: `playwright.config.ts`, `e2e/puntos.spec.ts`, `e2e/mapa.spec.ts`,
+  `e2e/soporte/`. Script nuevo: `bun run test:e2e` (con el `.env` cargado; levanta la app en :8081).
+- **Candados contra dinero real:** la config no arranca si `PAYMENTS_PROVIDER` no es `mock`, el servidor de
+  prueba fuerza `mock` y `N8N_WEBHOOK_URL` vacío, y cada cobro exige ver "Modo de pruebas" en la caja.
+- **Login sin correo:** `generate_link` con la service role → `/auth/v1/verify` → `/auth#…`.
+- **Fase 4 verificada en navegador:** regla de puntos → cobro de $200 con cliente → pago simulado → +20
+  puntos (comprobado en BD); canje de 10 → cancelar → devolución; monedero del cliente.
+- **Fase 5:** `/mapa` público y filtros pasan. Las 3 pruebas con negocios se **omiten** hasta aplicar
+  `20261108030000_mapa_publico.sql`; luego correr `bun run test:e2e` y, si pasan, ✅ HND-050–053.
+- **Datos en la base compartida:** dueñas `duena-puntos@` y `duena-mapa@e2e.handle-prueba.mx` con negocios
+  "E2E Taquería …" (quedan `activo=false`), y un cliente `cliente-puntos-*@e2e…` por corrida (el ledger es
+  inmutable, no se borra). Mientras corre la suite los negocios E2E aparecen unos segundos en `/mapa`.
+- **Verificación tras integrar:** Vitest 102/102, `tsc` 0 errores, build correcto. E2E del agente: 5 pasan, 3 omitidas.
+
+---
+
 ## 2026-11-07 · Integrado agente-3: T3 (HND-060), T5 (HND-116), T7 (horario)
 
 - **T3 · Landing (HND-060), `3e3a14b`:** landing para changarros en `/` con el copy de `docs/03-landing.md`
