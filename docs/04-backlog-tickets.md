@@ -169,6 +169,7 @@ Incluye reemplazar el logo: hoy apunta al almacén de assets de Lovable (`/__l5e
 ### HND-061 · Aviso de privacidad y términos `infra`
 Aviso de privacidad (LFPDPPP) y términos (incluye que los puntos no son efectivo).
 **Aceptación:** enlaces legales activos y aceptación registrada.
+**Estado (T4, agente-4):** rutas `/privacidad` y `/terminos`, enlaces en el pie y en `/auth`, casilla obligatoria al registrarse. La aceptación se guarda en `legal_acceptances` con la migración `20261108040401_aceptacion_legal.sql` (**pendiente de aplicar**). Falta: datos del responsable (domicilio y correo) y revisión legal; luego `BORRADOR_LEGAL = false` en `src/lib/legal.ts`.
 
 ### ✅ HND-005 · Preset de despliegue Cloudflare `setup` `infra`
 Configurar preset Cloudflare Workers en TanStack Start/Nitro; pipeline de build. Incluye verificar que ningún secreto (service role, llaves de Pey) quede en el bundle y probar el artefacto en el runtime de Workers.
@@ -208,7 +209,7 @@ Pendiente antes de producción:
 - **HND-112** Asistente IA del negocio (del repo base: categorización y consultas en lenguaje natural).
 - **HND-113** Baja de cuenta y anonimización (LFPDPPP): la bitácora KYB es inmutable y bloquea borrar un negocio revisado o a su revisor. Definir cómo cumplir el derecho de cancelación (anonimizar datos personales conservando la auditoría).
 - **HND-114** Rechazo por documento: que la red marque qué documento específico debe corregirse (hoy el rechazo es del expediente completo y el motivo va en la nota).
-- **HND-115** Ajuste manual del pin: cuando Nominatim no encuentra la dirección (o solo ubica el código postal), que la red pueda mover el pin en el mapa.
+- **HND-115** Ajuste manual del pin: cuando Nominatim no encuentra la dirección (o solo ubica el código postal), que la red pueda mover el pin en el mapa. ✅ Hecho para `admin_red` en `/red/$id` ("Mover pin", server function `moverPin`, T8). El dueño no puede (lo bloquea `guard_business_write`); habilitarlo es decisión pendiente.
 - **HND-116** Vencer cobros en la base: hoy un cobro pendiente se muestra "Vencido" en pantalla a los 10 min, pero en la base sigue "pendiente". Un job (pg_cron) que lo marque `expirado`.
   _Migración lista sin aplicar: `20261108040301_job_vencer_cobros.sql` (prueba `supabase/tests/job_vencer_cobros.sql`)._
 - **HND-117** Comisiones de Pey: registrar la comisión de cada cobro (`amountBreakdown.fee`) como egreso para que el saldo en Handle coincida con lo que llega al banco.

@@ -3,7 +3,7 @@ import { Logo } from "@/components/logo";
 
 /**
  * Pie de las páginas públicas (HND-060).
- * Los enlaces legales (aviso de privacidad y términos, HND-061) se agregan en la lista "Legal".
+ * La lista "Legal" enlaza el aviso de privacidad y los términos (HND-061).
  */
 export function PiePublico() {
   return (
@@ -43,8 +43,16 @@ export function PiePublico() {
         <nav aria-label="Legal" className="space-y-2 text-sm">
           <p className="font-medium">Legal</p>
           <ul className="space-y-2 text-muted-foreground">
-            {/* HND-061: aviso de privacidad y términos van aquí. */}
-            <li>Aviso de privacidad (próximamente)</li>
+            <li>
+              <Link to="/privacidad" className="hover:text-foreground">
+                Aviso de privacidad
+              </Link>
+            </li>
+            <li>
+              <Link to="/terminos" className="hover:text-foreground">
+                Términos de uso
+              </Link>
+            </li>
           </ul>
         </nav>
       </div>

@@ -2,6 +2,7 @@ import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 import { exigirRol } from "./autorizacion";
+import { errorCoordenada, redondearCoordenada, type Coordenada } from "./pin";
 
 /**
  * HND-053: la red marca o desmarca un negocio como recomendado en el mapa.
@@ -42,4 +43,49 @@ export const marcarRecomendado = createServerFn({ method: "POST" })
       .single();
     if (error) throw new Error(error.message);
     return { recomendado: actualizado.recomendado };
+  });
+
+/**
+ * HND-115: la red corrige a mano el pin de un negocio aprobado (cuando Nominatim no
+ * encontró la dirección o solo ubicó el código postal). Mismos candados que
+ * marcarRecomendado: exigirRol, RLS (businesses_update deja a admin_red) y el trigger
+ * guard_business_write, que impide que el negocio mueva su propio pin.
+ */
+export const moverPin = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((d) =>
+    z
+      .object({ businessId: z.string().uuid(), lat: z.number(), lng: z.number() })
+      .refine((c) => errorCoordenada(c) === null, { message: "El pin debe quedar dentro de México." })
+      .parse(d),
+  )
+  .handler(async ({ data, context }): Promise<Coordenada> => {
+    await exigirRol(
+      context.supabase,
+      context.userId,
+      ["admin_red"],
+      "Solo la red Handle puede mover el pin de un negocio.",
+    );
+
+    const { data: negocio, error: errorLectura } = await context.supabase
+      .from("businesses")
+      .select("estado_kyb")
+      .eq("id", data.businessId)
+      .maybeSingle();
+    if (errorLectura) throw new Error(errorLectura.message);
+    if (!negocio) throw new Error("No encontramos este negocio.");
+    if (negocio.estado_kyb !== "aprobado") {
+      throw new Error("Solo se puede ubicar un negocio con el expediente aprobado.");
+    }
+
+    // Con la sesión de quien llama (no el admin client): RLS y el trigger vuelven a validar.
+    const { lat, lng } = redondearCoordenada(data);
+    const { data: actualizado, error } = await context.supabase
+      .from("businesses")
+      .update({ lat, lng })
+      .eq("id", data.businessId)
+      .select("lat, lng")
+      .single();
+    if (error) throw new Error(error.message);
+    return { lat: Number(actualizado.lat), lng: Number(actualizado.lng) };
   });
