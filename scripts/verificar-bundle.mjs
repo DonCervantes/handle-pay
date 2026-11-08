@@ -10,7 +10,9 @@
 // 2. El bundle del navegador no lee variables secretas (env.X / env["X"]): señal de código de
 //    servidor filtrado. Mencionarlas en un texto de ayuda está bien.
 // 3. MapLibre no está en el bundle del servidor (solo corre en el navegador).
-// 4. Tamaño del Worker (gzip) contra el límite de Cloudflare: 3 MiB en el plan gratuito,
+// 4. El modo demo (T14) no existe en producción: el módulo que crea sesiones sin correo
+//    (src/lib/demo.server.ts, marca "handle-demo-sesion-v1") no está en el bundle.
+// 5. Tamaño del Worker (gzip) contra el límite de Cloudflare: 3 MiB en el plan gratuito,
 //    10 MiB en el de pago. Falla si pasa LIMITE_WORKER_MIB (3 por defecto).
 import { gzipSync } from "node:zlib";
 import { existsSync, readFileSync, readdirSync, statSync } from "node:fs";
@@ -107,6 +109,14 @@ if (maplibre.length) {
   fallas.push(`MapLibre está en el bundle del servidor: ${maplibre.map((f) => relative(SALIDA, f)).join(", ")}`);
 }
 
+// T14: la marca solo vive en demo.server.ts, que se importa en ramas `if (import.meta.env.DEV)`.
+const MARCA_DEMO = "handle-demo-sesion-v1";
+for (const archivo of todos) {
+  if (readFileSync(archivo, "utf8").includes(MARCA_DEMO)) {
+    fallas.push(`El modo demo (sesión sin correo) está en el build: ${relative(SALIDA, archivo)}`);
+  }
+}
+
 const contenido = modulos.map((f) => readFileSync(f));
 const crudo = contenido.reduce((s, b) => s + b.length, 0);
 const comprimido = gzipSync(Buffer.concat(contenido), { level: 9 }).length;
@@ -123,4 +133,4 @@ if (fallas.length) {
   for (const falla of fallas) console.error(`FALLA: ${falla}`);
   process.exit(1);
 }
-console.log("OK: sin secretos en el bundle, MapLibre fuera del servidor y dentro del límite.");
+console.log("OK: sin secretos en el bundle, sin modo demo, MapLibre fuera del servidor y dentro del límite.");

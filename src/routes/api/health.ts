@@ -5,7 +5,8 @@ import { respuestaSalud } from "@/lib/salud";
 export const Route = createFileRoute("/api/health")({
   server: {
     handlers: {
-      GET: () => respuestaSalud(process.env),
+      // En el build de producción import.meta.env.DEV es false: demo siempre apagada.
+      GET: () => respuestaSalud(process.env, import.meta.env.DEV),
     },
   },
 });
