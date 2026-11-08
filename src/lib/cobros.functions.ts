@@ -211,11 +211,7 @@ export const crearCobro = createServerFn({ method: "POST" })
         idempotencyKey: z.string().uuid(),
         // HND-042 / HND-043: cliente identificado y puntos que usa como descuento.
         clienteEmail: z.string().trim().toLowerCase().email().max(255).optional(),
-        puntosCanje: z
-          .number()
-          .positive()
-          .refine((p) => Math.round(p * 100) === p * 100, "Los puntos admiten máximo 2 decimales.")
-          .optional(),
+        puntosCanje: z.number().int("Los puntos se usan en número entero.").positive().optional(),
       })
       .refine(
         (d) => d.tipo === "qr" || !!d.telefono,
