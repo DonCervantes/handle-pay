@@ -1,0 +1,41 @@
+{
+  "_doc": "T19 · Narración del video (voz de Dylan en ElevenLabs). Un texto por escena de video/escenas.json, basado en DEMO.md. El campo 'texto' es lo que se dice y también la fuente de los subtítulos (T20 los divide por frase). Números y símbolos van escritos con letra para que la voz los lea bien. Presupuesto: la suma de todos los textos ≤ 6,000 caracteres. Si cambias un texto, narrar.mjs regenera solo esa escena (caché por hash). La voz clonada habla rápido (~21 caracteres por segundo a velocidad 1.0), por eso 'speed' va en 0.9.",
+  "modelo": "eleven_multilingual_v2",
+  "voz": {
+    "stability": 0.5,
+    "similarity_boost": 0.8,
+    "style": 0.15,
+    "use_speaker_boost": true,
+    "speed": 0.9
+  },
+  "escenas": [
+    {
+      "id": "e0-gancho",
+      "texto": "Esta es Santa María la Ribera, en la Ciudad de México. Cada punto del mapa es un changarro que ya cobra con CoDi y premia a sus clientes con Handle. Las estrellas son los que la red recomienda. Puedes filtrar por categoría: abarrotes, taquerías, panaderías, fruterías… o ver solo los recomendados. Son tienditas de barrio, como las de tu cuadra. Hoy te cuento cómo funciona, con la historia de Doña Lupita y sus abarrotes."
+    },
+    {
+      "id": "e1-duena-puntos",
+      "texto": "Doña Lupita tiene unos abarrotes aquí en la colonia. Entra a Handle como dueña y llega a su resumen. En un vistazo ve cuánto vendió hoy con CoDi, cuántos cobros lleva, su ticket promedio y quién cobró: ella o Beto, su cajero. Sin cuadrar la caja a mano. Y más abajo, cómo le fue en los últimos treinta días: ventas, puntos entregados y clientes que regresan. Ahora vamos a Mi negocio, a la tarjeta del programa de puntos. Hoy Lupita regresa el cinco por ciento de cada compra. Quiere que sus clientas vuelvan más seguido, así que lo sube al diez por ciento. Y deja que paguen hasta la mitad de una compra con puntos. La vista previa le dice cuántos puntos gana un cliente con una compra. Guarda los cambios, y listo. Ella decide cuánto regresa. Y ojo: los puntos son descuento en su tienda, no dinero. No se retiran ni se transfieren."
+    },
+    {
+      "id": "e2-cajero-cobra",
+      "texto": "Ahora entra Beto, el cajero. Él no ve las ventas ni la configuración: llega directo a la caja, pensada para usarse en el celular. Mariana, una clienta de siempre, va a pagar doscientos cincuenta pesos. Beto escribe el monto y elige cobrar con código QR. Para darle sus puntos, la busca por su correo. Ahí está: Mariana López, clienta VIP, con unos ciento cincuenta puntos en esta tienda. Sin tarjeta de lealtad y sin otra app. Mariana quiere usar cincuenta puntos: se descuentan cincuenta pesos y quedan doscientos por cobrar. Beto cobra, y aparece el QR de CoDi. La pantalla ya le dice cuántos puntos va a ganar. Mariana lo escanea con la app de su banco, y el dinero llega directo a la cuenta de Lupita, sin comisión de terminal. En esta demo el pago es simulado; en la vida real, CoDi lo confirma en segundos y la pantalla cambia sola. ¡Pagado! Y Mariana ganó treinta puntos: el diez por ciento, y como es VIP, uno y medio veces más."
+    },
+    {
+      "id": "e3-monedero",
+      "texto": "Ahora vamos del lado de la clienta: el celular de Mariana. Abre su monedero en Handle desde el navegador, sin descargar ninguna app y sin crear otra cuenta de lealtad para cada tienda. Arriba ve su nivel, VIP, y su beneficio: entre más compra en la red, más puntos gana por cada compra. Abajo, su saldo en cada changarro: Abarrotes Doña Lupita, que acaba de subir con la compra, Tacos El Güero y Panadería La Espiga. Cada saldo dice cuándo vencen sus puntos, para que no se le pasen. Y en su historial aparece lo de hace un momento: usó cincuenta puntos y ganó treinta. Todo cuadra con lo que pasó en la caja, sin papelitos ni sellos. Mariana ve sus puntos de todos los changarros de la red, desde su celular, y sabe exactamente dónde puede usarlos."
+    },
+    {
+      "id": "e4-mapa-perfil",
+      "texto": "Ahora, el mapa. Es público: no necesitas cuenta para verlo, y lo puede abrir cualquier vecino desde su celular o su computadora. Puedes tocar la estrella de un negocio, o buscarlo en la lista de la derecha. Filtramos por abarrotes y abrimos el perfil de Abarrotes Doña Lupita. Aquí está su dirección y su horario: de lunes a sábado, de siete y media de la mañana a nueve y media de la noche, y el domingo de nueve a tres. También su promoción: gana diez puntos por cada cien pesos que pagues. Es justo lo que Lupita configuró hace un rato, y ya se ve aquí. Y cómo pagar: con CoDi, escaneando el QR en caja con la app de tu banco. Así, cualquiera en la colonia encuentra el changarro, ve a qué hora abre y sabe que ahí junta puntos. Para Lupita, es como tener su propia página, sin pagar por ella."
+    },
+    {
+      "id": "e5-red",
+      "texto": "Por último, la red Handle. Este equipo revisa el expediente de cada negocio antes de que pueda cobrar: su INE, su constancia fiscal, su comprobante de domicilio y su cuenta bancaria. Así nadie cobra a nombre de un negocio que no existe. En la pestaña de aprobados están los doce changarros de la colonia. Abrimos Frutería Doña Chela. Aquí la red ve sus datos, su programa de puntos y su ubicación. La conoce bien, así que la marca como negocio recomendado. Su pin estaba un poco fuera de lugar: la red lo arrastra a la esquina de enfrente, donde de verdad está, y guarda la ubicación. Ahora abrimos su perfil público, y en el mapa ya sale con su estrella y en su nuevo lugar. Así la red cuida la calidad del mapa: destaca a los buenos changarros y corrige las ubicaciones, para que la gente llegue sin perderse."
+    },
+    {
+      "id": "e6-cierre",
+      "texto": "Handle le da a la tiendita de la esquina lo que tienen las cadenas: cobro digital sin comisiones de tarjeta, un programa de lealtad propio, y clientes nuevos que la encuentran en el mapa. Sin terminal y sin app extra: solo un celular. Para la tiendita de Lupita, y para todas las de tu colonia. Eso es Handle."
+    }
+  ]
+}
