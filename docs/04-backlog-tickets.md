@@ -169,6 +169,7 @@ Incluye reemplazar el logo: hoy apunta al almacén de assets de Lovable (`/__l5e
 ### HND-061 · Aviso de privacidad y términos `infra`
 Aviso de privacidad (LFPDPPP) y términos (incluye que los puntos no son efectivo).
 **Aceptación:** enlaces legales activos y aceptación registrada.
+**Estado (T4, agente-4):** rutas `/privacidad` y `/terminos`, enlaces en el pie y en `/auth`, casilla obligatoria al registrarse. La aceptación se guarda en `legal_acceptances` con la migración `20261108040401_aceptacion_legal.sql` (**pendiente de aplicar**). Falta: datos del responsable (domicilio y correo) y revisión legal; luego `BORRADOR_LEGAL = false` en `src/lib/legal.ts`.
 
 ### HND-005 · Preset de despliegue Cloudflare `setup` `infra`
 Configurar preset Cloudflare Workers en TanStack Start/Nitro; pipeline de build. Incluye verificar que ningún secreto (service role, llaves de Pey) quede en el bundle y probar el artefacto en el runtime de Workers.

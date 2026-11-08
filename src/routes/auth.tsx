@@ -1,4 +1,4 @@
-import { createFileRoute, useNavigate } from "@tanstack/react-router";
+import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useEffect, useState, type FormEvent, type ReactNode } from "react";
 import type { AuthError } from "@supabase/supabase-js";
 import { Gift, Loader2, Mail, MapPin, QrCode, ShoppingBag, Store } from "lucide-react";
@@ -10,12 +10,15 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Logo } from "@/components/logo";
+import { EnlacesLegales } from "@/components/enlaces-legales";
+import { metadatosAceptacion, type AceptacionLegal } from "@/lib/legal";
 import { inicioPorRol } from "@/lib/roles";
 import { cn } from "@/lib/utils";
 
 type Modo = "entrar" | "crear";
 type TipoCuenta = "negocio" | "cliente";
-type DatosRegistro = { full_name: string; tipo_cuenta: TipoCuenta; org_name?: string };
+// Las versiones aceptadas quedan registradas en legal_acceptances (trigger en auth.users).
+type DatosRegistro = { full_name: string; tipo_cuenta: TipoCuenta; org_name?: string } & AceptacionLegal;
 type Enviado = { email: string; modo: Modo; datos?: DatosRegistro };
 
 const searchSchema = z.object({
@@ -163,10 +166,15 @@ function AuthPage() {
     e.preventDefault();
     const f = new FormData(e.currentTarget);
     const full_name = String(f.get("full_name")).trim();
+    // El navegador ya exige la casilla (required); esto cubre envíos sin validación nativa.
+    if (f.get("acepta_legal") !== "si") {
+      toast.error("Para crear tu cuenta acepta los términos y el aviso de privacidad.");
+      return;
+    }
     const datos: DatosRegistro =
       tipoCuenta === "negocio"
-        ? { full_name, tipo_cuenta: "negocio", org_name: String(f.get("org_name")).trim() }
-        : { full_name, tipo_cuenta: "cliente" };
+        ? { full_name, tipo_cuenta: "negocio", org_name: String(f.get("org_name")).trim(), ...metadatosAceptacion() }
+        : { full_name, tipo_cuenta: "cliente", ...metadatosAceptacion() };
     void enviarEnlace(String(f.get("email")).trim().toLowerCase(), "crear", datos);
   }
 
@@ -267,6 +275,29 @@ function AuthPage() {
                     <Campo label="Nombre de tu negocio" name="org_name" autoComplete="organization" placeholder="Abarrotes Doña Mari" />
                   )}
                   <Campo label="Correo electrónico" name="email" type="email" autoComplete="email" placeholder="tucorreo@ejemplo.com" />
+                  <div className="flex items-start gap-2">
+                    <input
+                      id="acepta_legal"
+                      name="acepta_legal"
+                      type="checkbox"
+                      value="si"
+                      required
+                      className="mt-0.5 size-4 shrink-0 accent-primary"
+                    />
+                    <Label htmlFor="acepta_legal" className="text-xs font-normal leading-snug text-muted-foreground">
+                      <span>
+                        Acepto los{" "}
+                        <Link to="/terminos" target="_blank" className="font-medium text-foreground underline underline-offset-2">
+                          términos de uso
+                        </Link>{" "}
+                        y el{" "}
+                        <Link to="/privacidad" target="_blank" className="font-medium text-foreground underline underline-offset-2">
+                          aviso de privacidad
+                        </Link>
+                        . Entiendo que los puntos son descuentos y no dinero.
+                      </span>
+                    </Label>
+                  </div>
                   <Button className="w-full" disabled={cargando}>
                     {cargando && <Loader2 className="animate-spin" />}
                     {cargando ? "Enviando…" : "Crear mi cuenta"}
@@ -281,6 +312,7 @@ function AuthPage() {
             </Tabs>
           )}
         </div>
+        <EnlacesLegales />
       </div>
       <div className="bg-brand-gradient hidden flex-col justify-end gap-8 p-12 text-primary-foreground lg:flex">
         <p className="max-w-md text-3xl font-semibold leading-tight">El cobro de tu changarro, en tu mano.</p>

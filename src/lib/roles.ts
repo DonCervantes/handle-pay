@@ -85,7 +85,7 @@ const ACCESO: readonly { ruta: string; roles: readonly Rol[] }[] = [
  * verifica un test). "/" cubre solo el inicio; las demás, sus subrutas.
  * Nunca leen tablas con datos sensibles: el mapa usa negocios_publicos().
  */
-const RUTAS_PUBLICAS: readonly string[] = ["/", "/auth", "/mapa"];
+const RUTAS_PUBLICAS: readonly string[] = ["/", "/auth", "/mapa", "/privacidad", "/terminos"];
 
 export function esRutaPublica(ruta: string): boolean {
   const limpia = ruta.length > 1 ? ruta.replace(/\/+$/, "") : ruta;
