@@ -20,6 +20,7 @@ dist-ssr
 .env
 .env.*
 !.env.example
+!.env.production.example
 
 # Documentos con datos personales o bancarios (solo locales; el repo es público)
 docs/soporte-pey-pago-no-registrado.md
