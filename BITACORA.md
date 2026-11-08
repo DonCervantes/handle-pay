@@ -61,7 +61,7 @@ Así se ha trabajado en este repo; síguela para que los dos trabajemos igual.
 
 ---
 
-## 2026-11-08 · Pulido de la demo (T21–T23 listas; T24 evidencia en el video, en curso)
+## 2026-11-08 · Pulido de la demo y evidencia de cobro real en el video (T21–T24)
 
 - Estado al empezar: todo T1–T20 en `main` (PRs #1–#4), CI verde, video en el release `demo-video-2026-11-08`.
 - **Decisiones de Dylan:** unificar `/clientes` con los clientes de puntos; mostrar puntos redondeados hacia
@@ -83,8 +83,19 @@ Así se ha trabajado en este repo; síguela para que los dos trabajemos igual.
   (escena opcional 5b en `DEMO.md`; aprobar es irreversible → `demo:limpiar && demo:datos` para repetir).
   `/red` → Aprobados oculta inactivos (`?inactivos=true` para verlos). `demo:limpiar` también borra Storage y
   dejó intactos los datos ajenos (huella idéntica).
-- **Verificación tras integrar T21–T23 en `pulido-demo`:** Vitest 164/164, `tsc` 0 errores, build y
+- **Verificación tras integrar T21–T24 en `pulido-demo`:** Vitest 164/164, `tsc` y build OK tras T24 (que solo
+  toca `video/`). Antes, con T21–T23: Vitest 164/164, `tsc` 0 errores, build y
   `verificar:bundle` OK, **E2E 21/21** contra la base real. Datos de demo resembrados al final.
+- **T24 · Evidencia de cobro CoDi real en el video (agente-17, `b53b2a0`):** escena nueva `e2b-evidencia-codi`
+  ("Prueba real con CoDi") entre e2 y e3, con 2 capturas de la app del banco leyendo un QR CoDi real de $0.01
+  generado por Handle + Pey. `node video/evidencias/limpiar.mjs` tapa nombre del titular, CLABE completa (queda
+  "•••• 0385"), saldo y cuenta de origen; los originales viven en `video/media/evidencias/originales/` (no
+  versionados) y `preparar.mjs` los rechaza. Verificado visualmente por el agente y por el coordinador.
+  **A pedido de Dylan la narración ya no dice "simulado" ni "demo"** (Handle es funcional): cambió la frase de
+  e2; se regeneraron solo e2 y e2b (1,136 caracteres; acumulado 6,242; e2 sin generaciones restantes). La
+  narración no afirma que Pey concilió ese pago (sigue pendiente con soporte de Pey). Las grabaciones de la app
+  no se alteraron. Video nuevo **4:45** (285.1 s) en `video/media/salida/handle-demo.mp4`; el anterior quedó como
+  `handle-demo-v1.mp4`. `render.mjs` acepta `--navegador <ruta>`.
 - **Decisiones para Dylan:** saldos < 1 punto se ven "0 pts" (¿ocultar?); la suma de movimientos redondeados
   puede no cuadrar por 1 punto con el saldo; `/clientes` ya no permite altas manuales (los clientes nacen en la
   caja); el nivel es global del cliente; Aprobados muestra 14 (Tienda Prueba Pey y un E2E siguen activos).
@@ -96,7 +107,8 @@ Así se ha trabajado en este repo; síguela para que los dos trabajemos igual.
 **Resultado final:** demo lista en local y video narrado con la voz de Dylan.
 
 - **Video:** `video/media/salida/handle-demo.mp4` (no versionado: pesa 28.4 MB). **Descarga:**
-  https://github.com/DonCervantes/handle-pay/releases/tag/demo-video-2026-11-08 (pre-release publicado por Dylan). H.264 1920×1080 30 fps, audio AAC, **4:35**.
+  https://github.com/DonCervantes/handle-pay/releases/tag/demo-video-2026-11-08 (pre-release publicado por Dylan;
+  la versión 4:45 con la evidencia de cobro real reemplaza al MP4 cuando Dylan lo vuelve a subir). H.264 1920×1080 30 fps, audio AAC, **4:35**.
 - **T18 · Grabaciones (agente-11, `f8f855f`):** `video/grabar/grabar.mjs` reinicia los datos de demo, levanta
   la app en modo demo y graba e0–e5 de `DEMO.md` con Playwright (1920×1080, cursor visible, ritmo pausado).
   La app corre en un iframe con CSS `zoom` (125 % en escritorio; e3 en marco de celular 390×844) para que el

@@ -84,6 +84,7 @@ hacia abajo; el pin lo sigue moviendo solo la red (sin cambios); pulir la demo; 
 
 ## Estado
 
+- **2026-11-08 (tarde):** T21–T24 terminadas en `pulido-demo` → PR a `main`.
 - **2026-11-08:** T1–T20 terminadas. T1–T12 en `main` (PR #1 y #2); T13–T20 en `demo-solida` → PR a `main`. Ver `BITACORA.md`.
 
 Se actualiza en `BITACORA.md` cada vez que el coordinador integra una rama.
