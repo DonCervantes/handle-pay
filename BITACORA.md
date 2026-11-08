@@ -65,8 +65,8 @@ Así se ha trabajado en este repo; síguela para que los dos trabajemos igual.
 
 **Resultado final:** demo lista en local y video narrado con la voz de Dylan.
 
-- **Video:** `video/media/salida/handle-demo.mp4` (no versionado: pesa 28.4 MB). Para compartirlo, Dylan
-  puede subirlo como release de GitHub (comando en la sección de pendientes) o mandarlo por otro medio. H.264 1920×1080 30 fps, audio AAC, **4:35**.
+- **Video:** `video/media/salida/handle-demo.mp4` (no versionado: pesa 28.4 MB). **Descarga:**
+  https://github.com/DonCervantes/handle-pay/releases/tag/demo-video-2026-11-08 (pre-release publicado por Dylan). H.264 1920×1080 30 fps, audio AAC, **4:35**.
 - **T18 · Grabaciones (agente-11, `f8f855f`):** `video/grabar/grabar.mjs` reinicia los datos de demo, levanta
   la app en modo demo y graba e0–e5 de `DEMO.md` con Playwright (1920×1080, cursor visible, ritmo pausado).
   La app corre en un iframe con CSS `zoom` (125 % en escritorio; e3 en marco de celular 390×844) para que el
