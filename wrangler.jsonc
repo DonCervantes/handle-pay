@@ -1,0 +1,10 @@
+// HND-005 · Configuración base del Worker. Nitro la combina al compilar y escribe
+// .output/server/wrangler.json (main, assets y reglas de módulos los pone Nitro).
+// Los secretos NO van aquí: se cargan con `wrangler secret put <NOMBRE>`
+// (SUPABASE_SERVICE_ROLE_KEY, PEY_API_KEY, PEY_WEBHOOK_SECRET, GROQ_API_KEY, N8N_WEBHOOK_URL).
+{
+  "name": "handle-pay",
+  "compatibility_date": "2026-11-01",
+  "compatibility_flags": ["nodejs_compat"],
+  "observability": { "enabled": true }
+}
