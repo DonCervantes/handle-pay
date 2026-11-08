@@ -1099,6 +1099,20 @@ export type Database = {
         Returns: number
       }
       my_customer_id: { Args: never; Returns: string }
+      negocios_publicos: {
+        Args: never
+        Returns: {
+          categoria: Database["public"]["Enums"]["categoria_negocio"]
+          direccion: string
+          horario: Json
+          id: string
+          lat: number
+          lng: number
+          nombre_comercial: string
+          puntos_porcentaje: number
+          recomendado: boolean
+        }[]
+      }
       nivel_por_compras: {
         Args: { _compras: number }
         Returns: Database["public"]["Enums"]["nivel_cliente"]
