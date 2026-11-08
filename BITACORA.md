@@ -61,6 +61,20 @@ Así se ha trabajado en este repo; síguela para que los dos trabajemos igual.
 
 ---
 
+## 2026-11-07 · T2 integrado y migraciones empaquetadas para aplicar a mano
+
+- El `SUPABASE_ACCESS_TOKEN` recibido no tiene permisos (403: `database_read`, `projects_read`), así que las
+  migraciones las aplica el compañero desde el SQL Editor.
+- **T2 (`85c4bfc`) integrado** en `integracion-fase-4-5` para que código y migración vayan juntos.
+  Vitest 110/110, `tsc` 0 errores, build OK.
+- Nuevo [`supabase/pendientes/`](supabase/pendientes/LEEME.md): `2026-11-07_migraciones.sql` con las 4
+  migraciones en una sola transacción (SQL validado con libpg_query: 31 sentencias) y `LEEME.md` con los pasos
+  para aplicar, probar y qué esperar.
+- **Riesgo:** al aplicar T2, el código de `main` (Lovable) falla al cobrar a un cliente nuevo hasta que se
+  mergee `integracion-fase-4-5`. Aplicar cerca del merge.
+
+---
+
 ## 2026-11-07 · Integrado agente-4: T4 (HND-061), T8 (HND-115). Todas las tareas del plan terminadas
 
 - **T4 · Aviso de privacidad y términos (HND-061), `fad2f23`:** rutas públicas `/privacidad` (LFPDPPP) y
