@@ -87,7 +87,10 @@ begin
      'dueno-mapa@handle-prueba.mx', jsonb_build_object('org_id', _org_a, 'role', 'admin'), '{}'),
     (_red, '00000000-0000-0000-0000-000000000000', 'authenticated', 'authenticated',
      'red-mapa@handle-prueba.mx', jsonb_build_object('org_id', _org_red, 'role', 'admin'), '{}');
-  update public.profiles set role = 'admin_red' where id = _red;
+  -- handle_new_user ya no lee raw_app_meta_data (usa team_invites desde
+  -- 20261107220100): cada usuario nace dueño de una org propia. Se ligan a mano.
+  update public.profiles set org_id = _org_a, role = 'admin' where id = _dueno;
+  update public.profiles set org_id = _org_red, role = 'admin_red' where id = _red;
 
   -- 4) La gerencia del negocio NO puede recomendarse a sí misma (HND-053).
   perform set_config('request.jwt.claims', json_build_object('sub', _dueno, 'role', 'authenticated')::text, true);

@@ -61,6 +61,27 @@ Así se ha trabajado en este repo; síguela para que los dos trabajemos igual.
 
 ---
 
+## 2026-11-07 · Integrado agente-2: T6 (HND-005). T2 en espera
+
+- **T6 · Cloudflare Workers (HND-005), `c1ecd31` (cherry-pick `c804823`):** preset `cloudflare-module` fijo en
+  `vite.config.ts`, `wrangler.jsonc` (Worker `handle-pay`), MapLibre fuera del bundle de servidor (Worker de
+  1.05 → 0.76 MiB gzip) y `bun run verificar:bundle` (busca secretos y patrones de llaves en `.output`,
+  MapLibre en servidor y tamaño ≤ 3 MiB gzip; `LIMITE_WORKER_MIB=10` en plan de pago). Probado en workerd
+  (`wrangler dev`, desde la raíz) y Chromium headless. Secretos en producción con `wrangler secret put`.
+  Dentro de un build de Lovable manda su propia config.
+- **T2 · Seguridad en BD, `85c4bfc`: NO integrado todavía, a propósito.** Sigue en la rama `agente-2`.
+  Restringe `charges_insert_caja` a clientes ya ligados a la org (`cliente_ligado_a_mi_org()`), liga la primera
+  compra desde el servidor con `asignar_cliente_cobro()` (solo `service_role`) y pone `search_path=''` en
+  `is_admin_red`, `current_org_id`, `has_role`, `my_customer_id`. **Código y migración
+  (`20261108040201_seguridad_cobros_search_path.sql`) deben entrar juntos:** el código nuevo sin migración
+  cancela los cobros con cliente, y la migración con el código viejo rompe el primer cobro a un cliente nuevo.
+  Se integra en el mismo momento en que se aplique la migración. Prueba SQL verificada en PGlite (`ERROR: OK`).
+- **Arreglo en `supabase/tests/mapa_publico.sql`** (hallazgo del agente 2): el escenario 4 fallaba porque
+  `handle_new_user` ya no usa `raw_app_meta_data` (desde `20261107220100`); ahora se ligan los perfiles a mano.
+- **Verificación tras integrar:** Vitest 102/102, `tsc` 0 errores, build y `verificar:bundle` OK.
+
+---
+
 ## 2026-11-07 · Integrado agente-1: T1 suite E2E con Playwright
 
 - **Commit `898c943`.** Archivos: `playwright.config.ts`, `e2e/puntos.spec.ts`, `e2e/mapa.spec.ts`,
