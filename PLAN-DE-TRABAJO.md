@@ -72,4 +72,6 @@ original (Dashboard genérico, "Pagos a proveedores" vacío, textos de `/api` y 
 
 ## Estado
 
+- **2026-11-08:** T1–T20 terminadas. T1–T12 en `main` (PR #1 y #2); T13–T20 en `demo-solida` → PR a `main`. Ver `BITACORA.md`.
+
 Se actualiza en `BITACORA.md` cada vez que el coordinador integra una rama.

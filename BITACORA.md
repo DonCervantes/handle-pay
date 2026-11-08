@@ -61,6 +61,45 @@ Así se ha trabajado en este repo; síguela para que los dos trabajemos igual.
 
 ---
 
+## 2026-11-08 · Demo y video terminados (T13–T20) → PR a `main`
+
+**Resultado final:** demo lista en local y video narrado con la voz de Dylan.
+
+- **Video:** `video/media/salida/handle-demo.mp4` (no versionado: pesa 28.4 MB). Para compartirlo, Dylan
+  puede subirlo como release de GitHub (comando en la sección de pendientes) o mandarlo por otro medio. H.264 1920×1080 30 fps, audio AAC, **4:35**.
+- **T18 · Grabaciones (agente-11, `f8f855f`):** `video/grabar/grabar.mjs` reinicia los datos de demo, levanta
+  la app en modo demo y graba e0–e5 de `DEMO.md` con Playwright (1920×1080, cursor visible, ritmo pausado).
+  La app corre en un iframe con CSS `zoom` (125 % en escritorio; e3 en marco de celular 390×844) para que el
+  texto salga nítido. Salida: `video/media/grabaciones/*.webm` + `marcas.json`. Opciones `--escena`,
+  `--sin-reset`, `--solo-medir`.
+- **T19 · Narración (agente-12, `91622c5`):** ver entrada anterior. 4:24 de voz, 5,106 caracteres gastados.
+- **T20 · Remotion (agente-13, `e8e9c96`):** proyecto Remotion 4.0.538 en `video/` con su propio
+  `package.json`. Composición `HandleDemo`: tarjeta de título por escena, grabación ajustada a la voz (acelera
+  ≤1.25× o congela el último cuadro; nunca corta la narración), voz y subtítulos por frase; cierre con logo.
+  Re-render (~5 min): `cd video && npm install && node preparar.mjs && node render.mjs && node verificar.mjs`.
+  Pruebas de lógica `node --test` 6/6. No gastó créditos de ElevenLabs.
+- **Coordinador:** datos de demo restablecidos tras grabar (`demo:limpiar && demo:datos`: 12 negocios, 269
+  cobros, 80 movimientos de puntos).
+- **Verificación final en `demo-solida`:** Vitest 140/140, `tsc` 0 errores, build y `verificar:bundle` OK (sin
+  secretos ni modo demo en producción), E2E 13/13 (corrida previa a T18–T20, que no tocan la app). MP4
+  verificado: 274.7 s, 1920×1080, con audio.
+
+**Pendiente / decisiones para Dylan y su compañero:**
+- **Ver el video y escuchar la voz:** revisar pronunciación de "Handle", "CoDi", "VIP" e "INE" y las frases
+  nuevas de `video/narracion/textos.json`. Para corregir: editar el texto y `node video/narracion/narrar.mjs
+  --solo <id>` (máx. 2 generaciones por escena; `--max-generaciones` para subirlo), luego re-render.
+- En la escena de la red, "Aprobados" muestra 15 negocios (datos ajenos a la demo en la base compartida) y la
+  narración dice "doce changarros". Los subtítulos muestran los números con letra.
+- Antes de presentar en vivo: `npx bun run demo:limpiar && npx bun run demo:datos`.
+- Publicar el MP4 como release (lo hace Dylan; Claude no puede crear superficies públicas):
+  `gh release create demo-video-2026-11-08 video/media/salida/handle-demo.mp4 -R DonCervantes/handle-pay --prerelease --title "Video de demo de Handle"`.
+  Sin el MP4, el compañero lo regenera: grabaciones (`node video/grabar/grabar.mjs`) y render (ver T20); la narración
+  se regenera desde el historial sin gastar créditos solo en la máquina de Dylan (`video/media/` no se versiona).
+- Siguen abiertas las decisiones anteriores (textos legales, `/clientes`, prefijo "Demo ·" en el encabezado,
+  decimales en puntos, dueño mueve su pin, hosting y SMTP para el deploy).
+
+---
+
 ## 2026-11-07 · Video: segunda tanda lanzada (T18–T20, en curso)
 
 - Lanzada automáticamente (Dylan lo autorizó y dejó la sesión trabajando sola). 3 agentes (`agente-11` a
