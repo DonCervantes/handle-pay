@@ -38,3 +38,6 @@ docs/soporte-pey-pago-no-registrado.md
 *.njsproj
 *.sln
 *.sw?
+
+# Worktrees locales de Claude Code
+.claude/
