@@ -3,6 +3,7 @@ import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
 import { useEffect, useState, type FormEvent } from "react";
 import QRCode from "qrcode";
+import { idUnico } from "@/lib/id-unico";
 import {
   CheckCircle2,
   FlaskConical,
@@ -224,7 +225,7 @@ function NuevoCobro({ onCreado }: { onCreado: (c: CobroActivo) => void }) {
           ...(detalle.trim() ? { detalle: detalle.trim() } : {}),
           ...(emailLimpio ? { clienteEmail: emailLimpio } : {}),
           ...(puntosUsados > 0 ? { puntosCanje: puntosUsados } : {}),
-          idempotencyKey: crypto.randomUUID(),
+          idempotencyKey: idUnico(),
         },
       });
       onCreado({ ...r, conCliente: !!emailLimpio, tipo, ...(tel ? { telefono: tel } : {}) });

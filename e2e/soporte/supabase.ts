@@ -5,6 +5,7 @@ import { createClient, type SupabaseClient } from "@supabase/supabase-js";
 import type { Page } from "@playwright/test";
 import type { Database } from "../../src/integrations/supabase/types";
 import { BASE_URL, DOMINIO_E2E, entorno } from "./entorno";
+import { DOMINIO_DEMO, esCorreoDemo } from "../../src/lib/demo";
 
 type Admin = SupabaseClient<Database>;
 
@@ -46,8 +47,11 @@ export type DatosRegistro =
   | { full_name: string; tipo_cuenta: "cliente" };
 
 function exigirCorreoE2E(email: string) {
-  if (!email.endsWith(`@${DOMINIO_E2E}`)) {
-    throw new Error(`La suite E2E solo usa correos @${DOMINIO_E2E} (recibió ${email}).`);
+  // También las cuentas de la demo (T13, scripts/demo-datos.mjs): ya existen y solo se entra.
+  if (!email.endsWith(`@${DOMINIO_E2E}`) && !esCorreoDemo(email)) {
+    throw new Error(
+      `La suite E2E solo usa correos @${DOMINIO_E2E} o @${DOMINIO_DEMO} (recibió ${email}).`,
+    );
   }
 }
 

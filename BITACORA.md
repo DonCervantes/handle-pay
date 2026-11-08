@@ -61,6 +61,131 @@ Así se ha trabajado en este repo; síguela para que los dos trabajemos igual.
 
 ---
 
+## 2026-11-08 · Demo y video terminados (T13–T20) → PR a `main`
+
+**Resultado final:** demo lista en local y video narrado con la voz de Dylan.
+
+- **Video:** `video/media/salida/handle-demo.mp4` (no versionado: pesa 28.4 MB). Para compartirlo, Dylan
+  puede subirlo como release de GitHub (comando en la sección de pendientes) o mandarlo por otro medio. H.264 1920×1080 30 fps, audio AAC, **4:35**.
+- **T18 · Grabaciones (agente-11, `f8f855f`):** `video/grabar/grabar.mjs` reinicia los datos de demo, levanta
+  la app en modo demo y graba e0–e5 de `DEMO.md` con Playwright (1920×1080, cursor visible, ritmo pausado).
+  La app corre en un iframe con CSS `zoom` (125 % en escritorio; e3 en marco de celular 390×844) para que el
+  texto salga nítido. Salida: `video/media/grabaciones/*.webm` + `marcas.json`. Opciones `--escena`,
+  `--sin-reset`, `--solo-medir`.
+- **T19 · Narración (agente-12, `91622c5`):** ver entrada anterior. 4:24 de voz, 5,106 caracteres gastados.
+- **T20 · Remotion (agente-13, `e8e9c96`):** proyecto Remotion 4.0.538 en `video/` con su propio
+  `package.json`. Composición `HandleDemo`: tarjeta de título por escena, grabación ajustada a la voz (acelera
+  ≤1.25× o congela el último cuadro; nunca corta la narración), voz y subtítulos por frase; cierre con logo.
+  Re-render (~5 min): `cd video && npm install && node preparar.mjs && node render.mjs && node verificar.mjs`.
+  Pruebas de lógica `node --test` 6/6. No gastó créditos de ElevenLabs.
+- **Coordinador:** datos de demo restablecidos tras grabar (`demo:limpiar && demo:datos`: 12 negocios, 269
+  cobros, 80 movimientos de puntos).
+- **Verificación final en `demo-solida`:** Vitest 140/140, `tsc` 0 errores, build y `verificar:bundle` OK (sin
+  secretos ni modo demo en producción), E2E 13/13 (corrida previa a T18–T20, que no tocan la app). MP4
+  verificado: 274.7 s, 1920×1080, con audio.
+
+**Pendiente / decisiones para Dylan y su compañero:**
+- **Ver el video y escuchar la voz:** revisar pronunciación de "Handle", "CoDi", "VIP" e "INE" y las frases
+  nuevas de `video/narracion/textos.json`. Para corregir: editar el texto y `node video/narracion/narrar.mjs
+  --solo <id>` (máx. 2 generaciones por escena; `--max-generaciones` para subirlo), luego re-render.
+- En la escena de la red, "Aprobados" muestra 15 negocios (datos ajenos a la demo en la base compartida) y la
+  narración dice "doce changarros". Los subtítulos muestran los números con letra.
+- Antes de presentar en vivo: `npx bun run demo:limpiar && npx bun run demo:datos`.
+- Publicar el MP4 como release (lo hace Dylan; Claude no puede crear superficies públicas):
+  `gh release create demo-video-2026-11-08 video/media/salida/handle-demo.mp4 -R DonCervantes/handle-pay --prerelease --title "Video de demo de Handle"`.
+  Sin el MP4, el compañero lo regenera: grabaciones (`node video/grabar/grabar.mjs`) y render (ver T20); la narración
+  se regenera desde el historial sin gastar créditos solo en la máquina de Dylan (`video/media/` no se versiona).
+- Siguen abiertas las decisiones anteriores (textos legales, `/clientes`, prefijo "Demo ·" en el encabezado,
+  decimales en puntos, dueño mueve su pin, hosting y SMTP para el deploy).
+
+---
+
+## 2026-11-07 · Video: segunda tanda lanzada (T18–T20, en curso)
+
+- Lanzada automáticamente (Dylan lo autorizó y dejó la sesión trabajando sola). 3 agentes (`agente-11` a
+  `agente-13`) sobre `demo-solida`: T18 grabaciones Playwright, T19 narración ElevenLabs con la voz
+  "Dylan speedhack" (presupuesto ≤ 6,000 caracteres, caché por texto), T20 composición con Remotion.
+- **T19 · Narración (agente-12, `91622c5`), integrada:** `video/narracion/textos.json` (texto por escena, 4,857
+  caracteres, sirve también para subtítulos) y `video/narracion/narrar.mjs` (ElevenLabs `eleven_multilingual_v2`,
+  voz "Dylan speedhack", `speed 0.9`; caché por texto, historial de versiones, máx. 2 generaciones por escena,
+  `--simular`, `--verificar`, `--solo`, `--voz`). MP3 en `video/media/narracion/`: e0 23.0 s, e1 44.5, e2 51.7,
+  e3 39.4, e4 44.8, e5 43.2, e6 17.7 → **total 4:24**. Gastados 5,106 caracteres. **Pendiente Dylan:** escuchar
+  la pronunciación de "Handle", "CoDi", "VIP" e "INE"; revisar frases nuevas que no estaban en `DEMO.md`.
+- Contrato compartido en [`video/escenas.json`](video/escenas.json): 7 escenas (e0 gancho … e6 cierre) basadas en
+  `DEMO.md`. Los archivos pesados van en `video/media/` (ignorado por git); el video final quedará en
+  `video/media/salida/handle-demo.mp4`.
+
+---
+
+## 2026-11-07 · Demo lista en local: integrados T13, T14, T16 y T17
+
+**Cómo correr la demo:** `npx bun run demo` (red local, imprime URL y QR; `-- --tunel` para URL pública
+temporal con cloudflared) → abrir `/demo` y entrar con un toque como dueña, cajero, clienta o red. Guion paso a
+paso en [`DEMO.md`](DEMO.md). Reiniciar datos: `npx bun run demo:limpiar && npx bun run demo:datos` (~50 s).
+
+- **T13 · Datos de demo (agente-8, `79ce75b`, `08bdc72`):** `scripts/demo-datos.mjs` (`demo:datos`,
+  `demo:limpiar`, `--conteos`). 12 changarros en Santa María la Ribera (CP 06400) aprobados y en el mapa, 3
+  recomendados (Doña Lupita, Tacos El Güero, Panadería La Espiga), horarios y reglas de puntos. Cuentas
+  `@demo.handle-prueba.mx`: `lupita@` (dueña), `beto.cajero@`, `mariana@` (VIP), `jorge@` (confianza),
+  `sofia@` (nuevo), `red@` (`admin_red`). 269 cobros pagados en 30 días por las funciones SQL reales, con
+  canjes; fechas de puntos alineadas a su cobro. Idempotente. `--limpiar` borra solo lo de demo (verificado
+  contra totales de toda la base). **Usa `SUPABASE_ACCESS_TOKEN`** para limpiar el ledger inmutable y fechar
+  los puntos (triggers apagados solo dentro de esa transacción y solo sobre datos de demo).
+- **T14 · `/demo` (agente-10, `495b57c`):** entrar sin correo como dueña/cajero/cliente/red con `generate_link`
+  + `verifyOtp`. Solo con `DEMO_MODE=true`, `mock` y `vite dev`; en el build de producción el código no existe
+  (`verificar:bundle` lo revisa) y `/api/health` reporta `demo`, que `smoke:prod` exige en `false`.
+- **T16 · `bun run demo` (agente-10, `eb3553f`):** levanta `vite dev` en `0.0.0.0` con `mock` + `DEMO_MODE`,
+  imprime URL y QR. **Bug real arreglado:** por http en la red local la caja no cobraba (`crypto.randomUUID`
+  no existe fuera de contexto seguro) → `src/lib/id-unico.ts`. El túnel (`--tunel`) quedó sin probar
+  (cloudflared no instalado).
+- **T17 · `DEMO.md` (agente-8, `0f6cd7f`):** guion de 6 escenas (mapa → dueña sube puntos al 10 % → cajero
+  cobra $250 a Mariana con 50 puntos → monedero en celular → perfil público → la red recomienda y mueve un pin),
+  checklist, frases clave y plan B. Ensayado completo con Playwright: 12/12 pasos, escritorio y celular.
+- **Coordinador:** `e2e/demo-datos.spec.ts` buscaba "Ventas CoDi de hoy"; T15 lo cambió a "Ventas de hoy".
+- **Verificación tras integrar `demo-solida`:** Vitest 140/140, `tsc` 0 errores, build y `verificar:bundle` OK
+  (sin secretos, sin modo demo), **`bun run test:e2e` 13/13** contra la base real.
+- **Decisiones para Dylan:** el encabezado muestra "Demo · Abarrotes Doña Lupita" (el prefijo es la marca de
+  limpieza); no hay expedientes "en revisión" para mostrar la aprobación KYB; los saldos de puntos muestran
+  decimales ("130.67 pts"); `/clientes` sigue siendo el directorio del ERP; con `--tunel` cualquiera con el
+  enlace entra a las cuentas de demo.
+- **Siguiente:** segunda tanda del video (T18 grabaciones, T19 narración con la voz "Dylan speedhack", T20 Remotion).
+
+---
+
+## 2026-11-07 · Demo: integrado T15 (pantallas heredadas)
+
+- **T15 (agente-9, `c53ae20`):** `/dashboard` pasa a "Resumen" con métricas de Handle: hoy (ventas CoDi vs
+  ayer, cobros, ticket promedio, ventas por cajero) y 30 días (ventas, puntos entregados y canjeados, clientes que
+  regresan, gráfica por día, últimos cobros). Lee `charges` y `point_transactions` con RLS; cálculos puros en
+  `src/lib/resumen.ts` (7 pruebas). Menú sin "Pagos a proveedores" (la ruta `/pagos` queda sin enlace),
+  "Finanzas" → "Gastos y cuentas" (con el asistente de IA), `/api` sin el endpoint de proveedores y sin desborde
+  en celular, título y meta description de Handle. Recorrido Playwright por rol (escritorio y celular): 32
+  capturas, 0 errores de consola, 0 desbordes.
+- **Verificación tras integrar en `demo-solida`:** Vitest 121/121, `tsc` 0 errores, build y `verificar:bundle` OK.
+- **Decisiones para Dylan:** ¿borrar `/pagos` del todo? `/clientes` sigue siendo el directorio del ERP (tabla
+  `clients`), distinto de los clientes con puntos (`customers`): unificar o esconder para la demo.
+
+---
+
+## 2026-11-07 · Demo sólida en local y video: diagnóstico y tareas T13–T20 (en curso)
+
+- PR #2 (preparación del deploy) mergeado a `main` por Dylan. **Decisión:** la demo se hace en local (modo
+  `mock`, sin deploy); el deploy queda documentado en `DEPLOY.md` para después.
+- **Diagnóstico para la demo:** el mapa no muestra ningún negocio (3 en la base: uno sin pin y dos E2E
+  inactivos), solo hay 7 clientes y 11 cobros de prueba, no existen cuentas de cajero ni `admin_red`, el login
+  por correo solo llega a miembros del equipo de Supabase, y quedan pantallas del ERP original (Dashboard con
+  "Saldo total", "Pagos a proveedores" vacío en el menú, textos de `/api` y meta description).
+- Rama base **`demo-solida`**. Tareas en `PLAN-DE-TRABAJO.md`: T13 datos de demo, T14 `/demo` para entrar sin
+  correo (solo con `DEMO_MODE=true`), T15 limpiar pantallas heredadas, T16 `bun run demo` para celular (red
+  local o túnel), T17 guion `DEMO.md`; video: T18 grabaciones Playwright, T19 narración con la voz de Dylan
+  (ElevenLabs), T20 composición con Remotion.
+- 3 agentes (`agente-8` a `agente-10`) trabajando T13–T17. T18–T20 en una segunda tanda, tras integrar la demo
+  y con `ELEVENLABS_API_KEY` y `ELEVENLABS_VOICE_ID` en el `.env`.
+- **Datos de demo en la base compartida:** marcados con correos `@demo.handle-prueba.mx` y organizaciones
+  "Demo ·"; se borran con `--limpiar`. Los negocios de demo se verán en `/mapa` (también desde la app de Lovable).
+
+---
+
 ## 2026-11-07 · HND-062: preparación del deploy terminada (rama `deploy-hnd-062`)
 
 **Decisiones de Dylan:** hosting aún sin decidir (se preparó Cloudflare Workers y se documentó la alternativa

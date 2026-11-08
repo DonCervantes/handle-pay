@@ -11,12 +11,15 @@
     "prod:secretos": "node scripts/cloudflare-secrets.mjs",
     "prod:auth": "node scripts/supabase-auth-prod.mjs",
     "smoke:prod": "node scripts/smoke-prod.mjs",
+    "demo": "node scripts/demo.mjs",
     "preview": "vite preview",
     "lint": "eslint .",
     "format": "prettier --write .",
     "test": "vitest run",
     "test:watch": "vitest",
-    "test:e2e": "playwright test"
+    "test:e2e": "playwright test",
+    "demo:datos": "node --env-file=.env scripts/demo-datos.mjs",
+    "demo:limpiar": "node --env-file=.env scripts/demo-datos.mjs --limpiar"
   },
   "overrides": {
     "rolldown": "1.2.1"

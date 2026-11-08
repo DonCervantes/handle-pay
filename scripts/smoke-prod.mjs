@@ -143,7 +143,9 @@ await revisar("GET /api/health", async () => {
   exigir(buscarSecretos(texto).length === 0, "la respuesta contiene algo con forma de secreto");
   exigir(r.status === 200 && salud.ok === true, `status ${r.status}, faltan: ${(salud.faltan ?? []).join(", ") || "?"}`);
   if (pagosEsperado) exigir(salud.pagos === pagosEsperado, `pagos=${salud.pagos}, se esperaba ${pagosEsperado}`);
-  return `pagos=${salud.pagos}`;
+  // T14: el modo demo (entrar sin correo) jamás debe estar encendido en producción.
+  exigir(salud.demo !== true, "el modo demo está encendido (DEMO_MODE)");
+  return `pagos=${salud.pagos}, demo=${salud.demo === true ? "sí" : "no"}`;
 });
 
 // 3. El webhook de Pey no acepta nada sin firma válida.

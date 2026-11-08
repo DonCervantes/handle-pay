@@ -52,6 +52,26 @@ webhook en el portal de Pey, pago real, rotar llaves) lo hace Dylan; ver "Fuera 
 | T11 | Verificación post-deploy: endpoint `/api/health` (sin datos sensibles), script `scripts/smoke-prod.mjs <url>` que revisa `/`, `/mapa`, `/auth`, `/api/health`, que el webhook de Pey rechace firmas inválidas y que no haya secretos en el JS servido; probarlo contra `wrangler dev` local con webhook firmado de prueba | HND-062 | — | `src/routes/api/`, `scripts/` |
 | T12 | `DEPLOY.md`: runbook paso a paso para Dylan (Cloudflare login/token, dominio, Resend con SPF/DKIM/DMARC, Supabase Auth, webhook de Pey, pago real de $0.01, rotación de llaves, rollback con `wrangler rollback`), enlazando los scripts de T9–T11 | HND-062 | T9–T11 (coordinar nombres) | `DEPLOY.md` |
 
+## Tareas — Demo sólida en local y video (desde 2026-11-07, rama base `demo-solida`)
+
+Objetivo: una demo de 5–7 min en local (modo `mock`, sin deploy) y un video narrado con la voz de Dylan.
+Diagnóstico al crear estas tareas: el mapa no muestra ningún negocio, no hay cuentas de cajero ni de
+`admin_red`, el login por correo solo llega a miembros del equipo de Supabase y quedan pantallas del ERP
+original (Dashboard genérico, "Pagos a proveedores" vacío, textos de `/api` y meta description).
+
+| ID | Tarea | Depende de | Archivos principales |
+|---|---|---|---|
+| T13 | **Datos de demo.** `scripts/demo-datos.mjs` idempotente (service role) con `--limpiar`: ~12 changarros en una colonia de CDMX (aprobados, con pin, categorías variadas, 3 recomendados, horarios, reglas de puntos), usuarios por rol (dueña, cajero, 3 clientes, `admin_red`) con correos `@demo.handle-prueba.mx`, y 30 días de cobros pagados con puntos y niveles distintos. Constantes de cuentas en `src/lib/demo.ts` | — | `scripts/`, `src/lib/demo.ts` |
+| T14 | **Entrar sin correo en la demo.** Página `/demo` con botones "Entrar como dueña / cajero / cliente / red" que crea la sesión con `generate_link` desde el servidor, **solo** si `DEMO_MODE=true` y solo para correos `@demo.handle-prueba.mx`. Apagada por defecto; `/api/health` y `verificar:bundle` deben confirmar que en producción no existe | T13 (constantes) | `src/routes/demo.tsx`, `src/lib/demo.functions.ts`, `roles.ts` |
+| T15 | **Limpiar pantallas heredadas.** Dashboard con métricas de Handle (ventas de hoy, cobros, puntos emitidos y canjeados, clientes recurrentes); quitar "Pagos a proveedores" del menú; revisar `/finanzas` y `/api`; meta description de Handle. Recorrido Playwright por cada rol: captura de cada pantalla y cero errores de consola | T13 para datos | `dashboard.tsx`, `route.tsx`, `__root.tsx` |
+| T16 | **Demo en celular.** `bun run demo`: levanta la app con `mock` + `DEMO_MODE` en `0.0.0.0` (red local) e imprime la URL y un QR para abrirla; opción `--tunel` con `cloudflared tunnel --url` (sin cuenta). Verificar que el QR de la caja se lee desde otro dispositivo | T14 | `scripts/demo.mjs` |
+| T17 | **Guion de demo `DEMO.md`.** Historia de 5–7 min: dueña configura puntos → cajero cobra con cliente → pago simulado → cliente ve su monedero → mapa público y perfil → red recomienda y mueve pin. Checklist previo, frases clave, plan B si algo falla | T13–T16 | `DEMO.md` |
+| T18 | **Grabaciones del video.** Playwright graba cada escena del guion a 1920×1080 con cursor visible y pausas legibles → `video/grabaciones/*.webm` | T13–T17 | `video/grabar/` |
+| T19 | **Narración con la voz de Dylan.** Texto por escena (tono cercano, español de México) y `video/narrar.mjs` que genera un MP3 por escena con ElevenLabs (`ELEVENLABS_API_KEY`, `ELEVENLABS_VOICE_ID` del `.env`) y guarda las duraciones | T17 | `video/narracion/` |
+| T20 | **Video con Remotion.** Proyecto `video/` que compone grabaciones + narración + títulos y subtítulos, ajusta cada escena a la duración de su audio y renderiza `video/salida/handle-demo.mp4` | T18, T19 | `video/` |
+
 ## Estado
+
+- **2026-11-08:** T1–T20 terminadas. T1–T12 en `main` (PR #1 y #2); T13–T20 en `demo-solida` → PR a `main`. Ver `BITACORA.md`.
 
 Se actualiza en `BITACORA.md` cada vez que el coordinador integra una rama.
