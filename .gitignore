@@ -41,3 +41,7 @@ docs/soporte-pey-pago-no-registrado.md
 
 # Worktrees locales de Claude Code
 .claude/
+
+# Resultados de Playwright (E2E)
+test-results/
+playwright-report/

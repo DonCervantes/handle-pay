@@ -19,6 +19,7 @@ bun install
 cp .env.example .env     # pide los valores al dueño del proyecto (nunca se versionan)
 bun run dev              # http://localhost:8080
 bun run test             # Vitest
+set -a; source .env; set +a; bun run test:e2e   # Playwright (solo PAYMENTS_PROVIDER=mock; levanta la app en :8081)
 ```
 
 - **Stack:** TanStack Start (React 19, TS, Vite), Tailwind + shadcn/ui, Bun.
