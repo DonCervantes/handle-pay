@@ -61,6 +61,25 @@ Así se ha trabajado en este repo; síguela para que los dos trabajemos igual.
 
 ---
 
+## 2026-11-07 · Demo sólida en local y video: diagnóstico y tareas T13–T20 (en curso)
+
+- PR #2 (preparación del deploy) mergeado a `main` por Dylan. **Decisión:** la demo se hace en local (modo
+  `mock`, sin deploy); el deploy queda documentado en `DEPLOY.md` para después.
+- **Diagnóstico para la demo:** el mapa no muestra ningún negocio (3 en la base: uno sin pin y dos E2E
+  inactivos), solo hay 7 clientes y 11 cobros de prueba, no existen cuentas de cajero ni `admin_red`, el login
+  por correo solo llega a miembros del equipo de Supabase, y quedan pantallas del ERP original (Dashboard con
+  "Saldo total", "Pagos a proveedores" vacío en el menú, textos de `/api` y meta description).
+- Rama base **`demo-solida`**. Tareas en `PLAN-DE-TRABAJO.md`: T13 datos de demo, T14 `/demo` para entrar sin
+  correo (solo con `DEMO_MODE=true`), T15 limpiar pantallas heredadas, T16 `bun run demo` para celular (red
+  local o túnel), T17 guion `DEMO.md`; video: T18 grabaciones Playwright, T19 narración con la voz de Dylan
+  (ElevenLabs), T20 composición con Remotion.
+- 3 agentes (`agente-8` a `agente-10`) trabajando T13–T17. T18–T20 en una segunda tanda, tras integrar la demo
+  y con `ELEVENLABS_API_KEY` y `ELEVENLABS_VOICE_ID` en el `.env`.
+- **Datos de demo en la base compartida:** marcados con correos `@demo.handle-prueba.mx` y organizaciones
+  "Demo ·"; se borran con `--limpiar`. Los negocios de demo se verán en `/mapa` (también desde la app de Lovable).
+
+---
+
 ## 2026-11-07 · HND-062: preparación del deploy terminada (rama `deploy-hnd-062`)
 
 **Decisiones de Dylan:** hosting aún sin decidir (se preparó Cloudflare Workers y se documentó la alternativa
