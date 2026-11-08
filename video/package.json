@@ -1,0 +1,26 @@
+{
+  "name": "handle-video",
+  "private": true,
+  "type": "module",
+  "description": "T20 · Video de demo de Handle con Remotion (grabaciones T18 + narración T19).",
+  "scripts": {
+    "preparar": "node preparar.mjs",
+    "studio": "remotion studio src/index.ts --public-dir public",
+    "render": "node render.mjs",
+    "verificar": "node verificar.mjs",
+    "test": "node --test src/plan.test.ts",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@remotion/cli": "4.0.538",
+    "@remotion/renderer": "4.0.538",
+    "react": "19.2.0",
+    "react-dom": "19.2.0",
+    "remotion": "4.0.538"
+  },
+  "devDependencies": {
+    "@types/node": "22.16.5",
+    "@types/react": "19.2.2",
+    "typescript": "5.8.3"
+  }
+}
