@@ -10,6 +10,7 @@
     "verificar:bundle": "node scripts/verificar-bundle.mjs",
     "prod:secretos": "node scripts/cloudflare-secrets.mjs",
     "prod:auth": "node scripts/supabase-auth-prod.mjs",
+    "smoke:prod": "node scripts/smoke-prod.mjs",
     "preview": "vite preview",
     "lint": "eslint .",
     "format": "prettier --write .",
