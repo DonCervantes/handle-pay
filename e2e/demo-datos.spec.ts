@@ -42,7 +42,8 @@ test("la dueña ve las ventas de hoy y su programa de puntos", async ({ page }) 
   const errores = vigilarConsola(page);
   await entrarConMagicLink(page, cuentaDemo("duena").email);
   await page.waitForURL(/\/dashboard/);
-  await expect(page.getByText("Ventas CoDi de hoy")).toBeVisible();
+  // T15 convirtió el Dashboard en "Resumen": la tarjeta ahora dice "Ventas de hoy".
+  await expect(page.getByText("Ventas de hoy", { exact: true })).toBeVisible();
   await expect(page.getByText("Sin cobros todavía")).toHaveCount(0);
   await capturar(page, "duena-dashboard");
   await page.goto("/negocio");

@@ -61,6 +61,41 @@ Así se ha trabajado en este repo; síguela para que los dos trabajemos igual.
 
 ---
 
+## 2026-11-07 · Demo lista en local: integrados T13, T14, T16 y T17
+
+**Cómo correr la demo:** `npx bun run demo` (red local, imprime URL y QR; `-- --tunel` para URL pública
+temporal con cloudflared) → abrir `/demo` y entrar con un toque como dueña, cajero, clienta o red. Guion paso a
+paso en [`DEMO.md`](DEMO.md). Reiniciar datos: `npx bun run demo:limpiar && npx bun run demo:datos` (~50 s).
+
+- **T13 · Datos de demo (agente-8, `79ce75b`, `08bdc72`):** `scripts/demo-datos.mjs` (`demo:datos`,
+  `demo:limpiar`, `--conteos`). 12 changarros en Santa María la Ribera (CP 06400) aprobados y en el mapa, 3
+  recomendados (Doña Lupita, Tacos El Güero, Panadería La Espiga), horarios y reglas de puntos. Cuentas
+  `@demo.handle-prueba.mx`: `lupita@` (dueña), `beto.cajero@`, `mariana@` (VIP), `jorge@` (confianza),
+  `sofia@` (nuevo), `red@` (`admin_red`). 269 cobros pagados en 30 días por las funciones SQL reales, con
+  canjes; fechas de puntos alineadas a su cobro. Idempotente. `--limpiar` borra solo lo de demo (verificado
+  contra totales de toda la base). **Usa `SUPABASE_ACCESS_TOKEN`** para limpiar el ledger inmutable y fechar
+  los puntos (triggers apagados solo dentro de esa transacción y solo sobre datos de demo).
+- **T14 · `/demo` (agente-10, `495b57c`):** entrar sin correo como dueña/cajero/cliente/red con `generate_link`
+  + `verifyOtp`. Solo con `DEMO_MODE=true`, `mock` y `vite dev`; en el build de producción el código no existe
+  (`verificar:bundle` lo revisa) y `/api/health` reporta `demo`, que `smoke:prod` exige en `false`.
+- **T16 · `bun run demo` (agente-10, `eb3553f`):** levanta `vite dev` en `0.0.0.0` con `mock` + `DEMO_MODE`,
+  imprime URL y QR. **Bug real arreglado:** por http en la red local la caja no cobraba (`crypto.randomUUID`
+  no existe fuera de contexto seguro) → `src/lib/id-unico.ts`. El túnel (`--tunel`) quedó sin probar
+  (cloudflared no instalado).
+- **T17 · `DEMO.md` (agente-8, `0f6cd7f`):** guion de 6 escenas (mapa → dueña sube puntos al 10 % → cajero
+  cobra $250 a Mariana con 50 puntos → monedero en celular → perfil público → la red recomienda y mueve un pin),
+  checklist, frases clave y plan B. Ensayado completo con Playwright: 12/12 pasos, escritorio y celular.
+- **Coordinador:** `e2e/demo-datos.spec.ts` buscaba "Ventas CoDi de hoy"; T15 lo cambió a "Ventas de hoy".
+- **Verificación tras integrar `demo-solida`:** Vitest 140/140, `tsc` 0 errores, build y `verificar:bundle` OK
+  (sin secretos, sin modo demo), **`bun run test:e2e` 13/13** contra la base real.
+- **Decisiones para Dylan:** el encabezado muestra "Demo · Abarrotes Doña Lupita" (el prefijo es la marca de
+  limpieza); no hay expedientes "en revisión" para mostrar la aprobación KYB; los saldos de puntos muestran
+  decimales ("130.67 pts"); `/clientes` sigue siendo el directorio del ERP; con `--tunel` cualquiera con el
+  enlace entra a las cuentas de demo.
+- **Siguiente:** segunda tanda del video (T18 grabaciones, T19 narración con la voz "Dylan speedhack", T20 Remotion).
+
+---
+
 ## 2026-11-07 · Demo: integrado T15 (pantallas heredadas)
 
 - **T15 (agente-9, `c53ae20`):** `/dashboard` pasa a "Resumen" con métricas de Handle: hoy (ventas CoDi vs
