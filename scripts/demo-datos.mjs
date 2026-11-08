@@ -702,7 +702,63 @@ async function sembrar() {
     }
   });
   console.log(`  ${faltan.length} cobros nuevos (${plan.length - faltan.length} ya existían).`);
+
+  if (await sqlAdmin(SQL_FECHAR_PUNTOS, "Fechar los movimientos de puntos")) {
+    console.log("  Movimientos de puntos fechados como sus cobros.");
+  } else {
+    console.log(
+      "  Aviso: sin SUPABASE_ACCESS_TOKEN/SUPABASE_PROJECT_ID los movimientos de puntos quedan con la fecha de hoy.",
+    );
+  }
 }
+
+// ---------------------------------------------------------------------------
+// SQL con el Management API (solo para lo que el ledger inmutable no deja hacer)
+// ---------------------------------------------------------------------------
+/** Corre SQL con SUPABASE_ACCESS_TOKEN. Devuelve false si no hay token (no hace nada). */
+async function sqlAdmin(query, contexto) {
+  const ref = process.env.SUPABASE_PROJECT_ID?.trim();
+  const token = process.env.SUPABASE_ACCESS_TOKEN?.trim();
+  if (!ref || !token) return false;
+  const r = await fetch(`https://api.supabase.com/v1/projects/${ref}/database/query`, {
+    method: "POST",
+    headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json" },
+    body: JSON.stringify({ query }),
+  });
+  if (!r.ok) throw new Error(`${contexto} falló (HTTP ${r.status}): ${ocultar(await r.text()).slice(0, 500)}`);
+  return true;
+}
+
+/** Organizaciones "Demo · …" en las que TODOS sus miembros son de la demo (SQL). */
+const SQL_ORGS_DEMO = `
+  select o.id from public.organizations o
+   where o.name like '${PREFIJO_ORG_DEMO}%'
+     and not exists (
+       select 1 from public.profiles p
+        where p.org_id = o.id and (p.email is null or lower(p.email) not like '%@${DOMINIO_DEMO}')
+     )`;
+
+/**
+ * El trigger del ledger fecha cada movimiento con now(): sin esto el monedero mostraría toda
+ * la historia con la fecha de hoy. Lleva cada movimiento de un cobro de demo ("demo:%") a la
+ * fecha de su pago (el canje un minuto antes que la acumulación). Solo datos de demo y solo
+ * movimientos que aún no se han fechado: es idempotente. Los cobros hechos en vivo durante la
+ * demo no tienen llave "demo:%" y conservan su fecha real.
+ */
+const SQL_FECHAR_PUNTOS = `
+begin;
+set local session_replication_role = replica;
+update public.point_transactions pt
+   set created_at = c.paid_at - case when pt.tipo = 'canje' then interval '1 minute' else interval '0' end
+  from public.charges c
+ where pt.charge_id = c.id
+   and c.idempotency_key like 'demo:%'
+   and c.paid_at is not null
+   and pt.created_at > c.paid_at + interval '1 minute'
+   and pt.org_id in (${SQL_ORGS_DEMO})
+   and pt.customer_id in (select id from public.customers where lower(email) like '%@${DOMINIO_DEMO}');
+commit;
+`;
 
 // ---------------------------------------------------------------------------
 // Limpiar
@@ -710,13 +766,7 @@ async function sembrar() {
 const SQL_LIMPIEZA = `
 begin;
 -- Solo organizaciones "Demo · …" en las que TODOS sus miembros son de la demo.
-create temp table _orgs_demo on commit drop as
-  select o.id from public.organizations o
-   where o.name like '${PREFIJO_ORG_DEMO}%'
-     and not exists (
-       select 1 from public.profiles p
-        where p.org_id = o.id and (p.email is null or lower(p.email) not like '%@${DOMINIO_DEMO}')
-     );
+create temp table _orgs_demo on commit drop as ${SQL_ORGS_DEMO};
 create temp table _clientes_demo on commit drop as
   select id from public.customers where lower(email) like '%@${DOMINIO_DEMO}';
 create temp table _perfiles_demo on commit drop as
@@ -751,20 +801,12 @@ async function limpiar() {
   console.log(`Negocios de demo retirados del mapa (${orgIds.length} organizaciones).`);
 
   // 2) Borrado completo con el Management API (el ledger es inmutable para service role).
-  const ref = process.env.SUPABASE_PROJECT_ID?.trim();
-  const token = process.env.SUPABASE_ACCESS_TOKEN?.trim();
-  if (!ref || !token) {
+  if (!(await sqlAdmin(SQL_LIMPIEZA, "La limpieza en la base"))) {
     console.log(
       "Sin SUPABASE_ACCESS_TOKEN/SUPABASE_PROJECT_ID no se puede borrar el ledger de puntos: los datos quedan retirados, no borrados.",
     );
     return;
   }
-  const r = await fetch(`https://api.supabase.com/v1/projects/${ref}/database/query`, {
-    method: "POST",
-    headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json" },
-    body: JSON.stringify({ query: SQL_LIMPIEZA }),
-  });
-  if (!r.ok) throw new Error(`La limpieza en la base falló (HTTP ${r.status}): ${ocultar(await r.text()).slice(0, 500)}`);
   console.log("Datos de demo borrados de la base.");
 
   // 3) Usuarios de Auth con correo de demo (sus perfiles ya no existen).
