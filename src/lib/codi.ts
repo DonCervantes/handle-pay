@@ -44,3 +44,17 @@ export function conceptoCobro(negocio: string, detalle?: string): string {
 export function cobroVencido(creadoEn: string | Date, ahora: Date = new Date()): boolean {
   return ahora.getTime() - new Date(creadoEn).getTime() > VIGENCIA_COBRO_SEG * 1000;
 }
+
+/**
+ * Margen después de la vigencia antes de cerrar un cobro como expirado en la base
+ * (igual que vencer_cobros_pendientes(): 10 min de vigencia + 5 de margen = 15 min).
+ * El margen deja llegar un pago que el banco aceptó justo antes de vencer.
+ */
+export const MARGEN_CIERRE_SEG = 300;
+
+/** ¿Ya se puede cerrar como expirado un cobro que sigue pendiente? */
+export function cobroParaCerrar(creadoEn: string | Date, ahora: Date = new Date()): boolean {
+  return (
+    ahora.getTime() - new Date(creadoEn).getTime() > (VIGENCIA_COBRO_SEG + MARGEN_CIERRE_SEG) * 1000
+  );
+}
