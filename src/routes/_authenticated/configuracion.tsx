@@ -101,7 +101,7 @@ function Configuracion() {
               title="Inteligencia artificial (Groq)"
               active={st?.groq.configured}
               detail={st ? `Modelo: ${st.groq.model}` : "…"}
-              hint="Asistente financiero en el Dashboard y sugerencias de categorías en Finanzas."
+              hint="Asistente y sugerencias de categorías en Gastos y cuentas."
               missing="Agrega el secreto GROQ_API_KEY para activarla."
             />
             <IntegrationCard

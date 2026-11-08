@@ -4,7 +4,6 @@ import { useEffect, useState } from "react";
 import {
   LayoutDashboard,
   Banknote,
-  Send,
   Users,
   UserCog,
   Settings,
@@ -167,14 +166,15 @@ function MenuCuenta({ me, grande = false }: { me: Me; grande?: boolean }) {
 // Marco de oficina: menú lateral (cajón en celular), pensado para computadora
 // =============================================================================
 
+// "Pagos a proveedores" (/pagos) salió del menú: es una pantalla heredada del ERP
+// sin flujo todavía; la ruta sigue existiendo pero ya no se ofrece.
 const navOficina = [
-  { to: "/negocio", label: "Mi negocio", icon: Store },
+  { to: "/dashboard", label: "Resumen", icon: LayoutDashboard },
   { to: "/caja", label: "Caja", icon: QrCode },
+  { to: "/negocio", label: "Mi negocio", icon: Store },
   { to: "/red", label: "Red Handle", icon: ShieldCheck },
-  { to: "/dashboard", label: "Dashboard", icon: LayoutDashboard },
-  { to: "/finanzas", label: "Finanzas", icon: Banknote },
-  { to: "/pagos", label: "Pagos a proveedores", icon: Send },
   { to: "/clientes", label: "Clientes", icon: Users },
+  { to: "/finanzas", label: "Gastos y cuentas", icon: Banknote },
   { to: "/colaboradores", label: "Colaboradores", icon: UserCog },
   { to: "/api", label: "API", icon: Code2 },
 ] as const;

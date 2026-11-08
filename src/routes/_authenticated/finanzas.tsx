@@ -13,6 +13,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { StatusBadge } from "@/components/status-badge";
 import { EmptyRow, FormField, NativeSelect } from "@/components/form-bits";
 import { AiCategorize } from "@/components/ai-categorize";
+import { FinanceAssistant } from "@/components/finance-assistant";
 import { accountsQuery, transactionsQuery, clientsQuery } from "@/lib/data";
 import { formatDate, formatMXN } from "@/lib/format";
 import { pageMeta } from "@/lib/metadata";
@@ -21,7 +22,7 @@ import { DirectoryLoading, DirectoryError } from "@/components/directory-feedbac
 export const Route = createFileRoute("/_authenticated/finanzas")({
   validateSearch: (search: Record<string, unknown>) => ({ from: typeof search["from"] === "string" ? search["from"] : "", to: typeof search["to"] === "string" ? search["to"] : "", cat: typeof search["cat"] === "string" ? search["cat"] : "" }),
   loader: async ({ context }) => { await Promise.all([context.queryClient.ensureQueryData(transactionsQuery), context.queryClient.ensureQueryData(accountsQuery), context.queryClient.ensureQueryData(clientsQuery)]); },
-  head: () => pageMeta("Finanzas", "Ingresos, egresos y saldos de tus cuentas en Handle."),
+  head: () => pageMeta("Gastos y cuentas", "Registra la renta, la luz, lo que le pagas al proveedor y otros movimientos que no pasan por la caja."),
   pendingComponent: DirectoryLoading,
   errorComponent: DirectoryError,
   notFoundComponent: () => <p>No se encontró esta página.</p>,
@@ -46,8 +47,8 @@ function Finanzas() {
   return (
     <>
       <PageHeader
-        title="Finanzas"
-        description="Registra y consulta los movimientos de tus cuentas."
+        title="Gastos y cuentas"
+        description="Tus cobros CoDi se anotan solos. Aquí agregas lo que no pasa por la caja: renta, luz, proveedor, retiros."
         actions={<><AiCategorize /><NewTransaction accounts={accounts} categories={categories} /></>}
       />
       <div className="mb-6 grid gap-3 sm:grid-cols-3">
@@ -114,6 +115,9 @@ function Finanzas() {
           </TableBody>
         </Table>
       </Card>
+      <div className="mt-6">
+        <FinanceAssistant />
+      </div>
     </>
   );
 }
