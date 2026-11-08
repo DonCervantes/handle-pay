@@ -61,6 +61,43 @@ Así se ha trabajado en este repo; síguela para que los dos trabajemos igual.
 
 ---
 
+## 2026-11-07 · Integrado agente-4: T4 (HND-061), T8 (HND-115). Todas las tareas del plan terminadas
+
+- **T4 · Aviso de privacidad y términos (HND-061), `fad2f23`:** rutas públicas `/privacidad` (LFPDPPP) y
+  `/terminos` (los puntos no son efectivo), enlazadas en el pie de la landing y en `/auth`. "Crear cuenta"
+  exige marcar la aceptación y manda `terminos_version` y `privacidad_version` en los metadatos del alta.
+  Migración **sin aplicar** `20261108040401_aceptacion_legal.sql` (tabla `legal_acceptances` + trigger aparte
+  en `auth.users`, nunca hace fallar un alta), prueba `supabase/tests/aceptacion_legal.sql` (`ERROR: OK` en
+  PGlite). Sin la migración el alta funciona igual; solo no se registra la aceptación. Playwright 24/24.
+- **T8 · Mover el pin (HND-115), `7d4edc2`:** `admin_red` coloca o mueve el pin desde `/red/$id` (server
+  function `moverPin`, solo negocios aprobados y dentro de México). Sin migración. Playwright 9/9 con sesión
+  `admin_red` real; el dueño queda bloqueado por la base (`42501`). Datos E2E borrados.
+- **Bug corregido de paso:** el mapa de `/mapa` medía 0 px de alto (el CSS de MapLibre le ganaba a `absolute`
+  de Tailwind v4). Ahora se ve.
+- **Verificación tras integrar:** Vitest 110/110, `tsc` 0 errores, build y `verificar:bundle` OK.
+- **Decisiones para Dylan:**
+  - Textos legales en borrador (`BORRADOR_LEGAL = true` muestra aviso): faltan domicilio y correo del
+    responsable en `RESPONSABLE` (`src/lib/legal.ts`) y revisión legal.
+  - El personal invitado y las cuentas que ya existían no registran aceptación; decidir si se pide al entrar.
+  - ¿El dueño puede mover su propio pin? Hoy no (`guard_business_write`); permitirlo cambia la seguridad.
+
+### Estado del plan
+
+T1–T8 terminadas. Integradas en `integracion-fase-4-5`: T1, T3, T4, T5, T6, T7, T8. **T2 en espera** en la
+rama `agente-2` hasta aplicar su migración.
+
+**Migraciones pendientes, en este orden** (cuando llegue `SUPABASE_ACCESS_TOKEN`):
+
+1. `20261108030000_mapa_publico.sql` → prueba `supabase/tests/mapa_publico.sql`
+2. `20261108040201_seguridad_cobros_search_path.sql` → `seguridad_cobros_search_path.sql` + integrar `agente-2` (T2) en el mismo paso
+3. `20261108040301_job_vencer_cobros.sql` → `job_vencer_cobros.sql` (vencerá el cobro de $0.01 de Tienda Prueba Pey)
+4. `20261108040401_aceptacion_legal.sql` → `aceptacion_legal.sql`
+
+Después: regenerar `types.ts`, correr advisors de seguridad y `bun run test:e2e` (las 3 pruebas del mapa
+deben pasar para dar ✅ a HND-050–053).
+
+---
+
 ## 2026-11-07 · Integrado agente-2: T6 (HND-005). T2 en espera
 
 - **T6 · Cloudflare Workers (HND-005), `c1ecd31` (cherry-pick `c804823`):** preset `cloudflare-module` fijo en
