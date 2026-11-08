@@ -1,6 +1,6 @@
 // T14 · Entrar sin correo a las cuentas de demostración (solo con DEMO_MODE=true en desarrollo).
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
-import { useState, type ReactNode } from "react";
+import { useEffect, useState, type ReactNode } from "react";
 import { useQueryClient } from "@tanstack/react-query";
 import { Loader2, QrCode, ShieldCheck, Store, Wallet } from "lucide-react";
 import { toast } from "sonner";
@@ -53,6 +53,9 @@ function PaginaDemo() {
   const navigate = useNavigate();
   const queryClient = useQueryClient();
   const [entrando, setEntrando] = useState<PerfilDemo | null>(null);
+  // Los botones se activan al hidratar: un toque antes no haría nada (celulares lentos).
+  const [listo, setListo] = useState(false);
+  useEffect(() => setListo(true), []);
 
   async function entrar(perfil: PerfilDemo) {
     setEntrando(perfil);
@@ -87,7 +90,7 @@ function PaginaDemo() {
                   <button
                     type="button"
                     onClick={() => void entrar(o.perfil)}
-                    disabled={entrando !== null}
+                    disabled={!listo || entrando !== null}
                     className="flex w-full items-center gap-4 rounded-xl border bg-card px-4 py-4 text-left shadow-sm transition-colors hover:bg-muted disabled:opacity-60"
                   >
                     <span className="grid size-11 shrink-0 place-items-center rounded-lg bg-accent text-accent-foreground">
