@@ -8,6 +8,10 @@ Gestiona clientes, colaboradores, finanzas y pagos a proveedores en una sola pla
 
 `Hecho para PyMEs de México` · `Web3 invisible` · `IA nativa`
 
+**🌐 Pruébalo en vivo:** [handle-pay.cruzcervantesdanieladrianelias.workers.dev](https://handle-pay.cruzcervantesdanieladrianelias.workers.dev) · [Mapa de changarros](https://handle-pay.cruzcervantesdanieladrianelias.workers.dev/mapa)
+
+<sub>Desplegado en Cloudflare Workers. Los cobros están en modo de pruebas (no se mueve dinero).</sub>
+
 </div>
 
 ---
