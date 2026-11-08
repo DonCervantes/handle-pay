@@ -53,11 +53,14 @@ export function puntosGanados(montoPagado: number, regla: ReglaPuntos | null, ni
   return regla.tope_puntos != null ? Math.min(puntos, regla.tope_puntos) : puntos;
 }
 
-/** Máximo de puntos que se pueden usar en una compra de ese monto, dado el saldo. */
+/**
+ * Máximo de puntos (enteros) que se pueden usar en una compra de ese monto, dado el
+ * saldo. Usa el piso del saldo y del tope por regla: nunca ofrece puntos que no se ven.
+ */
 export function maximoCanje(monto: number, regla: ReglaPuntos | null, saldo: number) {
   if (!regla?.activo || monto <= 0 || saldo <= 0) return 0;
-  const porRegla = Math.floor(((monto * regla.canje_max_porcentaje) / 100) * 100) / 100;
-  return Math.min(porRegla, Math.floor(saldo * 100) / 100);
+  const porRegla = pisoPuntos((monto * regla.canje_max_porcentaje) / 100);
+  return Math.max(0, Math.min(porRegla, pisoPuntos(saldo)));
 }
 
 /** Valida el formulario de reglas del negocio. Devuelve errores por campo. */
@@ -97,11 +100,22 @@ export const TIPO_MOVIMIENTO: Record<string, string> = {
   expiracion: "Vencieron",
 };
 
-/** "12.5" → "12.50"; enteros sin decimales. */
-export function formatPuntos(n: number) {
-  return Number.isInteger(n)
-    ? n.toLocaleString("es-MX")
-    : n.toLocaleString("es-MX", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+/**
+ * Puntos enteros redondeados hacia abajo (hacia cero en negativos): 130.99 → 130,
+ * 0.4 → 0. La base guarda el valor exacto; en pantalla nunca se muestran puntos que
+ * el cliente aún no completa. El margen absorbe errores de punto flotante al sumar
+ * (129.99999999 → 130).
+ */
+export function pisoPuntos(n: number | string | null | undefined) {
+  const v = Number(n);
+  if (!Number.isFinite(v)) return 0;
+  const entero = Math.sign(v) * Math.floor(Math.abs(v) + 1e-9);
+  return entero === 0 ? 0 : entero; // sin "-0"
+}
+
+/** Formato único de puntos en pantalla: entero, hacia abajo, con separador de miles. */
+export function formatPuntos(n: number | string | null | undefined) {
+  return pisoPuntos(n).toLocaleString("es-MX", { maximumFractionDigits: 0 });
 }
 
 const CORREO = /^[^@\s]+@[^@\s]+\.[^@\s]+$/;
@@ -119,8 +133,8 @@ export function resumenCobro(monto: number, puntosCanje: number) {
  */
 export function errorCanje(puntos: number | null, maximo: number): string | null {
   if (puntos == null || puntos === 0) return null;
-  if (!(puntos > 0) || Math.round(puntos * 100) !== puntos * 100)
-    return "Escribe los puntos con máximo 2 decimales.";
+  if (!(puntos > 0) || !Number.isInteger(puntos))
+    return "Escribe los puntos en número entero (sin decimales).";
   if (puntos > maximo) return `En esta compra puede usar máximo ${formatPuntos(maximo)} puntos.`;
   return null;
 }

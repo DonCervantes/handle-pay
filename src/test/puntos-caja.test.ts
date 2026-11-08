@@ -37,15 +37,22 @@ describe("errorCanje", () => {
   });
   it("acepta hasta el máximo", () => {
     expect(errorCanje(50, maximo)).toBeNull();
-    expect(errorCanje(12.25, maximo)).toBeNull();
+    expect(errorCanje(12, maximo)).toBeNull();
   });
   it("rechaza más del máximo", () => {
-    expect(errorCanje(50.01, maximo)).toMatch(/máximo 50 puntos/);
+    expect(errorCanje(51, maximo)).toMatch(/máximo 50 puntos/);
   });
-  it("rechaza negativos, texto y más de 2 decimales", () => {
-    expect(errorCanje(-1, maximo)).toMatch(/2 decimales/);
-    expect(errorCanje(Number.NaN, maximo)).toMatch(/2 decimales/);
-    expect(errorCanje(1.234, maximo)).toMatch(/2 decimales/);
+  it("solo acepta enteros: rechaza negativos, texto y decimales", () => {
+    expect(errorCanje(-1, maximo)).toMatch(/número entero/);
+    expect(errorCanje(Number.NaN, maximo)).toMatch(/número entero/);
+    expect(errorCanje(12.25, maximo)).toMatch(/número entero/);
+    expect(errorCanje(0.5, maximo)).toMatch(/número entero/);
+  });
+  it("el máximo que se muestra usa el piso del saldo", () => {
+    const max = maximoCanje(1000, regla, 130.99);
+    expect(max).toBe(130);
+    expect(errorCanje(max, max)).toBeNull();
+    expect(errorCanje(131, max)).toMatch(/máximo 130 puntos/);
   });
 });
 
