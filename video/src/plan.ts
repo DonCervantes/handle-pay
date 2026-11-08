@@ -24,10 +24,19 @@ export type Video = {
   dispositivo: "compu" | "celular";
 };
 
+/** Captura fija (p. ej. la app del banco en T24), ya limpia de datos personales. */
+export type Imagen = { src: string; ancho: number; alto: number };
+
 export type Escena = {
   id: string;
   numero: number;
   titulo: string;
+  /** Texto de la tarjeta en lugar de "Escena N" (escenas intercaladas, como e2b). */
+  etiqueta?: string;
+  /** Rótulo propio de la escena (si no, se usa el título). */
+  rotulo?: string;
+  /** Capturas que se muestran en vez de una grabación. */
+  imagenes?: Imagen[];
   /** Texto narrado: fuente de los subtítulos. */
   texto: string;
   audio: { src: string; duracion: number } | null;
