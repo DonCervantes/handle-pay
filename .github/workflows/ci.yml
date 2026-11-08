@@ -1,0 +1,51 @@
+# HND-062 · CI: en cada PR (y en cada push a main) corre las mismas pruebas que se exigen
+# antes de un commit: Vitest, tsc, build de producción y verificación del bundle del Worker.
+# No usa secretos: los forks también pueden correrlo.
+name: CI
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  pruebas:
+    name: Pruebas, tipos, build y bundle
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    env:
+      # El simulador; nunca el proveedor real en CI.
+      PAYMENTS_PROVIDER: mock
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: 1.4.4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      - name: Instalar dependencias
+        run: bun install --frozen-lockfile
+
+      - name: Vitest
+        run: bun run test
+
+      - name: TypeScript
+        run: bunx tsc --noEmit
+
+      - name: Build
+        run: bun run build
+
+      - name: Verificar bundle (secretos, MapLibre, tamaño)
+        run: bun run verificar:bundle

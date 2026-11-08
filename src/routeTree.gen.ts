@@ -23,6 +23,7 @@ import { Route as AuthenticatedFinanzasRouteImport } from './routes/_authenticat
 import { Route as AuthenticatedMonederoRouteImport } from './routes/_authenticated/monedero'
 import { Route as AuthenticatedNegocioRouteImport } from './routes/_authenticated/negocio'
 import { Route as AuthenticatedPagosRouteImport } from './routes/_authenticated/pagos'
+import { Route as ApiHealthRouteImport } from './routes/api/health'
 import { Route as MapaIndexRouteImport } from './routes/mapa.index'
 import { Route as MapaIdRouteImport } from './routes/mapa.$id'
 import { Route as AuthenticatedClientesIndexRouteImport } from './routes/_authenticated/clientes.index'
@@ -105,6 +106,11 @@ const AuthenticatedPagosRoute = AuthenticatedPagosRouteImport.update({
   path: '/pagos',
   getParentRoute: () => AuthenticatedRouteRoute,
 } as any)
+const ApiHealthRoute = ApiHealthRouteImport.update({
+  id: '/api/health',
+  path: '/api/health',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const MapaIndexRoute = MapaIndexRouteImport.update({
   id: '/mapa/',
   path: '/mapa/',
@@ -171,6 +177,7 @@ export interface FileRoutesByFullPath {
   '/monedero': typeof AuthenticatedMonederoRoute
   '/negocio': typeof AuthenticatedNegocioRoute
   '/pagos': typeof AuthenticatedPagosRoute
+  '/api/health': typeof ApiHealthRoute
   '/mapa/$id': typeof MapaIdRoute
   '/mapa/': typeof MapaIndexRoute
   '/clientes/$id': typeof AuthenticatedClientesIdRoute
@@ -196,6 +203,7 @@ export interface FileRoutesByTo {
   '/monedero': typeof AuthenticatedMonederoRoute
   '/negocio': typeof AuthenticatedNegocioRoute
   '/pagos': typeof AuthenticatedPagosRoute
+  '/api/health': typeof ApiHealthRoute
   '/mapa/$id': typeof MapaIdRoute
   '/mapa': typeof MapaIndexRoute
   '/clientes/$id': typeof AuthenticatedClientesIdRoute
@@ -223,6 +231,7 @@ export interface FileRoutesById {
   '/_authenticated/monedero': typeof AuthenticatedMonederoRoute
   '/_authenticated/negocio': typeof AuthenticatedNegocioRoute
   '/_authenticated/pagos': typeof AuthenticatedPagosRoute
+  '/api/health': typeof ApiHealthRoute
   '/mapa/$id': typeof MapaIdRoute
   '/mapa/': typeof MapaIndexRoute
   '/_authenticated/clientes/$id': typeof AuthenticatedClientesIdRoute
@@ -250,6 +259,7 @@ export interface FileRouteTypes {
     | '/monedero'
     | '/negocio'
     | '/pagos'
+    | '/api/health'
     | '/mapa/$id'
     | '/mapa/'
     | '/clientes/$id'
@@ -275,6 +285,7 @@ export interface FileRouteTypes {
     | '/monedero'
     | '/negocio'
     | '/pagos'
+    | '/api/health'
     | '/mapa/$id'
     | '/mapa'
     | '/clientes/$id'
@@ -301,6 +312,7 @@ export interface FileRouteTypes {
     | '/_authenticated/monedero'
     | '/_authenticated/negocio'
     | '/_authenticated/pagos'
+    | '/api/health'
     | '/mapa/$id'
     | '/mapa/'
     | '/_authenticated/clientes/$id'
@@ -319,6 +331,7 @@ export interface RootRouteChildren {
   AuthRoute: typeof AuthRoute
   PrivacidadRoute: typeof PrivacidadRoute
   TerminosRoute: typeof TerminosRoute
+  ApiHealthRoute: typeof ApiHealthRoute
   MapaIdRoute: typeof MapaIdRoute
   MapaIndexRoute: typeof MapaIndexRoute
   ApiV1ClientsRoute: typeof ApiV1ClientsRoute
@@ -426,6 +439,13 @@ declare module '@tanstack/react-router' {
       fullPath: '/pagos'
       preLoaderRoute: typeof AuthenticatedPagosRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
+    }
+    '/api/health': {
+      id: '/api/health'
+      path: '/api/health'
+      fullPath: '/api/health'
+      preLoaderRoute: typeof ApiHealthRouteImport
+      parentRoute: typeof rootRouteImport
     }
     '/mapa/': {
       id: '/mapa/'
@@ -541,6 +561,7 @@ const rootRouteChildren: RootRouteChildren = {
   AuthRoute: AuthRoute,
   PrivacidadRoute: PrivacidadRoute,
   TerminosRoute: TerminosRoute,
+  ApiHealthRoute: ApiHealthRoute,
   MapaIdRoute: MapaIdRoute,
   MapaIndexRoute: MapaIndexRoute,
   ApiV1ClientsRoute: ApiV1ClientsRoute,

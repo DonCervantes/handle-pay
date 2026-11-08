@@ -1,0 +1,113 @@
+# HND-062 · Deploy a Cloudflare Workers. SOLO manual (Actions → "Deploy a Cloudflare" → Run workflow).
+#
+# - modo "simulacion" (por defecto): todo igual pero `wrangler deploy --dry-run` (no sube nada).
+# - modo "desplegar": sube el Worker. Solo se permite desde la rama main.
+#
+# Requiere en Settings → Secrets and variables → Actions:
+#   Secrets:   CLOUDFLARE_API_TOKEN (plantilla "Edit Cloudflare Workers"), CLOUDFLARE_ACCOUNT_ID
+#   Variables: VITE_SUPABASE_URL, VITE_SUPABASE_PUBLISHABLE_KEY, VITE_SUPABASE_PROJECT_ID
+#              (públicas por diseño: se inyectan en el bundle del navegador)
+# Si falta alguno, el job de deploy NO corre (queda "skipped") y el resumen dice qué falta.
+# Los secretos del Worker (SUPABASE_SERVICE_ROLE_KEY, PEY_*, GROQ_API_KEY…) no pasan por aquí:
+# se cargan una vez con scripts/cloudflare-secrets.mjs (ver DEPLOY.md).
+name: Deploy a Cloudflare
+
+on:
+  workflow_dispatch:
+    inputs:
+      modo:
+        description: "simulacion = wrangler deploy --dry-run; desplegar = deploy real (solo main)"
+        type: choice
+        options: [simulacion, desplegar]
+        default: simulacion
+
+permissions:
+  contents: read
+
+# Nunca dos deploys a la vez; uno en curso no se cancela.
+concurrency:
+  group: deploy-cloudflare
+  cancel-in-progress: false
+
+jobs:
+  requisitos:
+    name: Revisar secretos y variables
+    runs-on: ubuntu-latest
+    outputs:
+      listos: ${{ steps.revisar.outputs.listos }}
+    steps:
+      - id: revisar
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          VITE_SUPABASE_URL: ${{ vars.VITE_SUPABASE_URL }}
+          VITE_SUPABASE_PUBLISHABLE_KEY: ${{ vars.VITE_SUPABASE_PUBLISHABLE_KEY }}
+          MODO: ${{ inputs.modo }}
+          RAMA: ${{ github.ref }}
+        run: |
+          faltan=""
+          for nombre in CLOUDFLARE_API_TOKEN CLOUDFLARE_ACCOUNT_ID VITE_SUPABASE_URL VITE_SUPABASE_PUBLISHABLE_KEY; do
+            if [ -z "${!nombre}" ]; then faltan="$faltan $nombre"; fi
+          done
+          if [ -n "$faltan" ]; then
+            echo "::warning::Deploy omitido. Faltan:$faltan"
+            echo "Deploy omitido. Faltan:$faltan (ver DEPLOY.md)" >> "$GITHUB_STEP_SUMMARY"
+            echo "listos=false" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+          if [ "$MODO" = "desplegar" ] && [ "$RAMA" != "refs/heads/main" ]; then
+            echo "::error::El modo desplegar solo se permite desde main (rama actual: $RAMA)"
+            exit 1
+          fi
+          echo "listos=true" >> "$GITHUB_OUTPUT"
+
+  desplegar:
+    name: Build y deploy (${{ inputs.modo }})
+    needs: requisitos
+    if: needs.requisitos.outputs.listos == 'true'
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    env:
+      PAYMENTS_PROVIDER: mock
+      VITE_SUPABASE_URL: ${{ vars.VITE_SUPABASE_URL }}
+      VITE_SUPABASE_PUBLISHABLE_KEY: ${{ vars.VITE_SUPABASE_PUBLISHABLE_KEY }}
+      VITE_SUPABASE_PROJECT_ID: ${{ vars.VITE_SUPABASE_PROJECT_ID }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: 1.4.4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      - name: Instalar dependencias
+        run: bun install --frozen-lockfile
+
+      - name: Vitest
+        run: bun run test
+
+      - name: TypeScript
+        run: bunx tsc --noEmit
+
+      - name: Build
+        run: bun run build
+
+      - name: Verificar bundle (secretos, MapLibre, tamaño)
+        run: bun run verificar:bundle
+
+      # El build deja .wrangler/deploy/config.json apuntando a .output/server/wrangler.json,
+      # así que wrangler se corre desde la raíz.
+      - name: wrangler deploy
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          MODO: ${{ inputs.modo }}
+        run: |
+          if [ "$MODO" = "desplegar" ]; then
+            npx -y wrangler@4.158.0 deploy
+          else
+            npx -y wrangler@4.158.0 deploy --dry-run
+          fi
