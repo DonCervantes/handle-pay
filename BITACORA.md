@@ -66,6 +66,12 @@ Así se ha trabajado en este repo; síguela para que los dos trabajemos igual.
 - Lanzada automáticamente (Dylan lo autorizó y dejó la sesión trabajando sola). 3 agentes (`agente-11` a
   `agente-13`) sobre `demo-solida`: T18 grabaciones Playwright, T19 narración ElevenLabs con la voz
   "Dylan speedhack" (presupuesto ≤ 6,000 caracteres, caché por texto), T20 composición con Remotion.
+- **T19 · Narración (agente-12, `91622c5`), integrada:** `video/narracion/textos.json` (texto por escena, 4,857
+  caracteres, sirve también para subtítulos) y `video/narracion/narrar.mjs` (ElevenLabs `eleven_multilingual_v2`,
+  voz "Dylan speedhack", `speed 0.9`; caché por texto, historial de versiones, máx. 2 generaciones por escena,
+  `--simular`, `--verificar`, `--solo`, `--voz`). MP3 en `video/media/narracion/`: e0 23.0 s, e1 44.5, e2 51.7,
+  e3 39.4, e4 44.8, e5 43.2, e6 17.7 → **total 4:24**. Gastados 5,106 caracteres. **Pendiente Dylan:** escuchar
+  la pronunciación de "Handle", "CoDi", "VIP" e "INE"; revisar frases nuevas que no estaban en `DEMO.md`.
 - Contrato compartido en [`video/escenas.json`](video/escenas.json): 7 escenas (e0 gancho … e6 cierre) basadas en
   `DEMO.md`. Los archivos pesados van en `video/media/` (ignorado por git); el video final quedará en
   `video/media/salida/handle-demo.mp4`.
