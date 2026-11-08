@@ -1,0 +1,5 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 132 36" role="img" aria-label="Handle">
+  <path d="M17 2A15 15 0 0 0 2 17H17Z" fill="#f3eee2"/>
+  <path d="M19 34A15 15 0 0 0 34 19H19Z" fill="#c4ae84"/>
+  <text x="42" y="26" font-family="ui-sans-serif, system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif" font-size="22" font-weight="700" letter-spacing="-0.5" fill="#f3eee2">Handle</text>
+</svg>
