@@ -40,6 +40,7 @@ import {
   errorCanje,
   formatPuntos,
   maximoCanje,
+  pisoPuntos,
   puntosGanados,
   resumenCobro,
   type Nivel,
@@ -179,7 +180,8 @@ function NuevoCobro({ onCreado }: { onCreado: (c: CobroActivo) => void }) {
   const regla = busqueda?.regla ?? null;
   const cliente = busqueda?.cliente ?? null;
   const saldo = cliente?.saldo ?? 0;
-  const puedeCanjear = !!cliente && saldo > 0 && !!regla?.activo;
+  // Solo puntos enteros: con menos de 1 punto completo no se ofrece el canje.
+  const puedeCanjear = !!cliente && pisoPuntos(saldo) >= 1 && !!regla?.activo;
   const maximo = valor !== null && puedeCanjear ? maximoCanje(valor, regla, saldo) : 0;
   const puntos = puntosTexto.trim() ? Number(puntosTexto.replace(/[,\s]/g, "")) : 0;
   const errorPuntos = puedeCanjear ? errorCanje(puntos, maximo) : null;
@@ -394,7 +396,7 @@ function NuevoCobro({ onCreado }: { onCreado: (c: CobroActivo) => void }) {
                 <div className="flex gap-2">
                   <Input
                     id="puntos"
-                    inputMode="decimal"
+                    inputMode="numeric"
                     autoComplete="off"
                     value={puntosTexto}
                     onChange={(e) => {
@@ -428,7 +430,7 @@ function NuevoCobro({ onCreado }: { onCreado: (c: CobroActivo) => void }) {
             )}
           </fieldset>
 
-          {resumen && (resumen.descuento > 0 || aGanar > 0) && (
+          {resumen && (resumen.descuento > 0 || pisoPuntos(aGanar) > 0) && (
             <dl className="space-y-1 rounded-xl bg-muted/50 px-4 py-3 text-sm">
               <div className="flex justify-between">
                 <dt className="text-muted-foreground">Total</dt>
@@ -444,7 +446,7 @@ function NuevoCobro({ onCreado }: { onCreado: (c: CobroActivo) => void }) {
                 <dt>A cobrar</dt>
                 <dd className="tabular-nums">{formatMXN(resumen.aCobrar)}</dd>
               </div>
-              {aGanar > 0 && (
+              {pisoPuntos(aGanar) > 0 && (
                 <p className="flex items-center gap-1.5 pt-1 text-xs text-success">
                   <Gift className="size-3.5" /> Ganará {formatPuntos(aGanar)} puntos al pagar.
                 </p>
@@ -695,7 +697,7 @@ function DetallePuntos({ cobro, pagado = false }: { cobro: CobroActivo; pagado?:
     },
   });
   const puntos = pagado ? (ganados.data ?? cobro.puntosAGanar) : cobro.puntosAGanar;
-  if (!cobro.conCliente || puntos <= 0) return null;
+  if (!cobro.conCliente || pisoPuntos(puntos) <= 0) return null;
   return (
     <p className="mt-1 flex items-center justify-center gap-1.5 text-sm text-success">
       <Gift className="size-4" />

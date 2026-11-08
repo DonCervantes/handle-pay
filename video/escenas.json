@@ -6,6 +6,7 @@
     { "id": "e0-gancho", "titulo": "Santa María la Ribera, en Handle", "guion": "DEMO.md §0", "grabacion": "grabaciones/e0-gancho.webm", "audio": "narracion/e0-gancho.mp3" },
     { "id": "e1-duena-puntos", "titulo": "La dueña configura sus puntos", "guion": "DEMO.md §1", "grabacion": "grabaciones/e1-duena-puntos.webm", "audio": "narracion/e1-duena-puntos.mp3" },
     { "id": "e2-cajero-cobra", "titulo": "Cobro CoDi con puntos", "guion": "DEMO.md §2", "grabacion": "grabaciones/e2-cajero-cobra.webm", "audio": "narracion/e2-cajero-cobra.mp3" },
+    { "id": "e2b-evidencia-codi", "titulo": "Prueba real con CoDi", "etiqueta": "Prueba real", "guion": "T24 · capturas del banco (limpias con video/evidencias/limpiar.mjs)", "grabacion": null, "imagenes": ["evidencias/codi-qr-valido.png", "evidencias/codi-qr-info.png"], "rotulo": "Prueba real · Pey + banco · $0.01", "audio": "narracion/e2b-evidencia-codi.mp3" },
     { "id": "e3-monedero", "titulo": "El monedero de la clienta", "guion": "DEMO.md §3", "grabacion": "grabaciones/e3-monedero.webm", "audio": "narracion/e3-monedero.mp3", "dispositivo": "celular" },
     { "id": "e4-mapa-perfil", "titulo": "Mapa público y perfil", "guion": "DEMO.md §4", "grabacion": "grabaciones/e4-mapa-perfil.webm", "audio": "narracion/e4-mapa-perfil.mp3" },
     { "id": "e5-red", "titulo": "La red recomienda y corrige el pin", "guion": "DEMO.md §5", "grabacion": "grabaciones/e5-red.webm", "audio": "narracion/e5-red.mp3" },

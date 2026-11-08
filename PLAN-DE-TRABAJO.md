@@ -70,8 +70,21 @@ original (Dashboard genérico, "Pagos a proveedores" vacío, textos de `/api` y 
 | T19 | **Narración con la voz de Dylan.** Texto por escena (tono cercano, español de México) y `video/narrar.mjs` que genera un MP3 por escena con ElevenLabs (`ELEVENLABS_API_KEY`, `ELEVENLABS_VOICE_ID` del `.env`) y guarda las duraciones | T17 | `video/narracion/` |
 | T20 | **Video con Remotion.** Proyecto `video/` que compone grabaciones + narración + títulos y subtítulos, ajusta cada escena a la duración de su audio y renderiza `video/salida/handle-demo.mp4` | T18, T19 | `video/` |
 
+## Tareas — Pulido de la demo (desde 2026-11-08, rama base `pulido-demo`)
+
+Decisiones de Dylan (2026-11-08): unificar `/clientes` con los clientes de puntos; mostrar puntos redondeados
+hacia abajo; el pin lo sigue moviendo solo la red (sin cambios); pulir la demo; **no** re-hacer el video.
+
+| ID | Tarea | Depende de | Archivos principales |
+|---|---|---|---|
+| T21 | **`/clientes` = clientes reales del changarro.** Lista de `customers` que compraron en el negocio de la org (nombre, correo, compras pagadas, total gastado, puntos en este negocio, nivel, última visita), búsqueda y filtros en la URL, y ficha `/clientes/$id` con historial de cobros y de puntos. Lectura segura: server function con `exigirRol` (roles de oficina) y admin client filtrado por la org de quien llama (el cliente no se lee por RLS). El directorio viejo del ERP (`clients`) deja de mostrarse; no se borra la tabla | — | `src/routes/_authenticated/clientes.*`, `src/lib/clientes*.ts` |
+| T22 | **Puntos sin decimales en pantalla.** Formato único `formatPuntos()` que redondea hacia abajo en caja, monedero, resumen, perfil, `/clientes` y `/red`; el canje acepta solo enteros y el "máximo" usa el piso del saldo. La base conserva el valor exacto (sin migración). Pruebas de bordes (130.99 → 130, 0.4 → 0) | — | `src/lib/puntos.ts`, componentes que muestran puntos |
+| T23 | **Pulir la demo.** (a) Que no se vea "Demo ·" en la app: cambiar la marca de los datos de demo a algo invisible (p. ej. solo el dominio de correo de los miembros y una marca en metadatos), manteniendo `demo:limpiar` seguro e idempotente; (b) 2 negocios de demo con expediente **en revisión** (documentos de ejemplo en el bucket `kyb`) para mostrar la aprobación KYB desde `/red`; (c) en `/red` → Aprobados, ocultar por defecto los negocios inactivos (con un interruptor para verlos). Actualizar `DEMO.md` con una escena opcional de aprobación KYB | — | `scripts/demo-datos.mjs`, `src/lib/demo.ts`, `src/routes/_authenticated/red.*`, `DEMO.md` |
+| T24 | **Evidencia de cobro real en el video.** Nueva escena `e2b-evidencia-codi` después de e2: las 2 capturas de la app del banco (`video/media/evidencias/originales/`, NO versionadas) mostrando que el QR real de Handle + Pey se lee en el banco. **Antes de usarlas, difuminar con un script** (las versiones limpias van a `video/media/evidencias/`): CLABE completa (dejar solo `•0385`), nombre del titular, saldo y cuenta de origen (`•7746`). Narración breve (~15 s) y honesta: el banco reconoce el cobro con negocio, monto y concepto; NO afirmar que el pago se concilió (Pey no registró el pago de $0.01). Re-render del MP4 | T19, T20 | `video/evidencias/`, `video/narracion/textos.json`, `video/escenas.json`, `video/src/` |
+
 ## Estado
 
+- **2026-11-08 (tarde):** T21–T24 terminadas en `pulido-demo` → PR a `main`.
 - **2026-11-08:** T1–T20 terminadas. T1–T12 en `main` (PR #1 y #2); T13–T20 en `demo-solida` → PR a `main`. Ver `BITACORA.md`.
 
 Se actualiza en `BITACORA.md` cada vez que el coordinador integra una rama.

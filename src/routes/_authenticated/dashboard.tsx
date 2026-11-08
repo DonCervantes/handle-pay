@@ -10,6 +10,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
 import { AvisoExpediente } from "@/components/aviso-expediente";
 import { formatMXN } from "@/lib/format";
+import { formatPuntos } from "@/lib/puntos";
 import { pageMeta } from "@/lib/metadata";
 import { meQuery } from "@/lib/session";
 import { puedeEntrar } from "@/lib/roles";
@@ -28,7 +29,6 @@ export const Route = createFileRoute("/_authenticated/dashboard")({
   component: Resumen,
 });
 
-const puntosFmt = new Intl.NumberFormat("es-MX", { maximumFractionDigits: 0 });
 const horaFmt = new Intl.DateTimeFormat("es-MX", { hour: "numeric", minute: "2-digit" });
 /** Eje de la gráfica: $450, $1.4k, $2k. */
 function ejeMonto(v: number) {
@@ -194,13 +194,13 @@ function Contenido({
           />
           <Cifra
             etiqueta="Puntos entregados"
-            valor={puntosFmt.format(r.periodo.puntosEmitidos)}
+            valor={formatPuntos(r.periodo.puntosEmitidos)}
             icono={Gift}
             nota="Ganados por tus clientes"
           />
           <Cifra
             etiqueta="Puntos canjeados"
-            valor={puntosFmt.format(r.periodo.puntosCanjeados)}
+            valor={formatPuntos(r.periodo.puntosCanjeados)}
             icono={Gift}
             nota={`${formatMXN(r.periodo.puntosCanjeados)} de descuento`}
           />
@@ -283,7 +283,7 @@ function Contenido({
                     <div className="text-right">
                       <p className="tabular-nums font-medium">{formatMXN(cobrado(c))}</p>
                       {Number(c.descuento_puntos) > 0 && (
-                        <p className="text-xs text-gold">−{puntosFmt.format(Number(c.descuento_puntos))} pts</p>
+                        <p className="text-xs text-gold">−{formatPuntos(Number(c.descuento_puntos))} pts</p>
                       )}
                     </div>
                   </li>

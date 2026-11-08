@@ -5,6 +5,8 @@ import { supabase } from "@/integrations/supabase/client";
 import { PageHeader } from "@/components/page-header";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
+import { Switch } from "@/components/ui/switch";
+import { Label } from "@/components/ui/label";
 import {
   Table,
   TableBody,
@@ -20,6 +22,7 @@ import { CATEGORIAS } from "@/lib/kyb";
 import { formatDate } from "@/lib/format";
 import { pageMeta } from "@/lib/metadata";
 import { cn } from "@/lib/utils";
+import { aprobadosInactivos, negociosVisibles } from "@/lib/red";
 
 const FILTROS = [
   { valor: "en_revision", etiqueta: "En revisión" },
@@ -38,6 +41,8 @@ export const Route = createFileRoute("/_authenticated/red/")({
           .enum(["en_revision", "aprobado", "rechazado", "borrador", "todos"])
           .optional()
           .catch(undefined),
+        // En "Aprobados" los negocios inactivos se ocultan salvo con ?inactivos=true.
+        inactivos: z.boolean().optional().catch(undefined),
       })
       .parse(s),
   head: () => pageMeta("Red Handle", "Revisión de expedientes de los negocios afiliados."),
@@ -48,7 +53,9 @@ const etiquetaCategoria = (valor: string) =>
   CATEGORIAS.find((c) => c.valor === valor)?.etiqueta ?? valor;
 
 function ColaDeRevision() {
-  const estado: Filtro = Route.useSearch().estado ?? "en_revision";
+  const search = Route.useSearch();
+  const estado: Filtro = search.estado ?? "en_revision";
+  const verInactivos = search.inactivos ?? false;
   const navigate = useNavigate({ from: Route.fullPath });
   // La red ve todos los negocios (RLS: is_admin_red). Los más antiguos primero: se atienden en orden.
   const q = useQuery({
@@ -63,9 +70,9 @@ function ColaDeRevision() {
     },
   });
   const todos = q.data ?? [];
-  const cuenta = (f: Filtro) =>
-    f === "todos" ? todos.length : todos.filter((n) => n.estado_kyb === f).length;
-  const visibles = estado === "todos" ? todos : todos.filter((n) => n.estado_kyb === estado);
+  const cuenta = (f: Filtro) => negociosVisibles(todos, f, verInactivos).length;
+  const visibles = negociosVisibles(todos, estado, verInactivos);
+  const inactivos = aprobadosInactivos(todos);
 
   return (
     <>
@@ -81,7 +88,12 @@ function ColaDeRevision() {
             aria-selected={estado === f.valor}
             size="sm"
             variant={estado === f.valor ? "default" : "outline"}
-            onClick={() => navigate({ search: { estado: f.valor }, replace: true })}
+            onClick={() =>
+              navigate({
+                search: { estado: f.valor, ...(verInactivos ? { inactivos: true } : {}) },
+                replace: true,
+              })
+            }
           >
             {f.etiqueta}
             <span
@@ -95,6 +107,23 @@ function ColaDeRevision() {
           </Button>
         ))}
       </div>
+      {estado === "aprobado" && (
+        <div className="mb-4 flex items-center gap-2">
+          <Switch
+            id="ver-inactivos"
+            checked={verInactivos}
+            onCheckedChange={(v) =>
+              navigate({
+                search: { estado, ...(v ? { inactivos: true } : {}) },
+                replace: true,
+              })
+            }
+          />
+          <Label htmlFor="ver-inactivos" className="text-sm font-normal text-muted-foreground">
+            Mostrar negocios inactivos ({inactivos})
+          </Label>
+        </div>
+      )}
       <Card className="shadow-card">
         <Table>
           <TableHeader>
@@ -141,7 +170,13 @@ function ColaDeRevision() {
                 </TableCell>
                 <TableCell className="text-muted-foreground">{formatDate(n.updated_at)}</TableCell>
                 <TableCell className="text-xs text-muted-foreground">
-                  {n.estado_kyb !== "aprobado" ? "—" : n.lat != null ? "Ubicado" : "Sin ubicar"}
+                  {n.estado_kyb !== "aprobado"
+                    ? "—"
+                    : !n.activo
+                      ? "Inactivo"
+                      : n.lat != null
+                        ? "Ubicado"
+                        : "Sin ubicar"}
                 </TableCell>
                 <TableCell className="text-right">
                   <Button

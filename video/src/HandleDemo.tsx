@@ -21,6 +21,7 @@ import {
   duracionEscena,
   ENTRADA_VOZ,
   type Escena,
+  type Imagen,
   type PropsVideo,
   segundosAFrames,
   subtitulos,
@@ -44,7 +45,13 @@ export function HandleDemo({ escenas }: PropsVideo) {
       <Series>
         {escenas.map((e) => (
           <Series.Sequence key={e.id} durationInFrames={segundosAFrames(duracionEscena(e))} name={e.id}>
-            {e.video ? <EscenaGrabada escena={e} video={e.video} /> : <Cierre escena={e} />}
+            {e.video ? (
+              <EscenaGrabada escena={e} video={e.video} />
+            ) : e.imagenes?.length ? (
+              <EscenaCapturas escena={e} imagenes={e.imagenes} />
+            ) : (
+              <Cierre escena={e} />
+            )}
             {e.audio ? (
               <Sequence from={segundosAFrames(ENTRADA_VOZ)} name="voz">
                 <Audio src={staticFile(e.audio.src)} />
@@ -121,18 +128,31 @@ function Reproduccion({ video, ajuste }: { video: Video; ajuste: Ajuste }) {
 function MarcoCelular({ video, children }: { video: Video; children: ReactNode }) {
   const alto = 940;
   const ancho = Math.round((alto * video.ancho) / video.alto);
-  const izq = (1920 - ancho) / 2;
-  const arriba = (1080 - alto) / 2;
   return (
-    <AbsoluteFill style={{ background: `radial-gradient(circle at 50% 40%, ${COLOR.fondo} 0%, ${COLOR.crema} 75%)` }}>
+    <AbsoluteFill style={{ background: FONDO_CELULAR }}>
+      <Telefono izq={(1920 - ancho) / 2} arriba={(1080 - alto) / 2} ancho={ancho} alto={alto}>
+        {children}
+      </Telefono>
+    </AbsoluteFill>
+  );
+}
+
+const FONDO_CELULAR = `radial-gradient(circle at 50% 40%, ${COLOR.fondo} 0%, ${COLOR.crema} 75%)`;
+
+/** Cuerpo de teléfono (bisel oscuro y pantalla redondeada); el radio escala con el alto (940 → 48). */
+function Telefono({ izq, arriba, ancho, alto, children }: { izq: number; arriba: number; ancho: number; alto: number; children: ReactNode }) {
+  const k = alto / 940;
+  const bisel = 14 * k;
+  return (
+    <>
       <div
         style={{
           position: "absolute",
-          left: izq - 14,
-          top: arriba - 14,
-          width: ancho + 28,
-          height: alto + 28,
-          borderRadius: 62,
+          left: izq - bisel,
+          top: arriba - bisel,
+          width: ancho + bisel * 2,
+          height: alto + bisel * 2,
+          borderRadius: 62 * k,
           background: COLOR.tinta,
           boxShadow: "0 40px 90px rgba(29,27,24,0.35)",
         }}
@@ -144,13 +164,104 @@ function MarcoCelular({ video, children }: { video: Video; children: ReactNode }
           top: arriba,
           width: ancho,
           height: alto,
-          borderRadius: 48,
+          borderRadius: 48 * k,
           overflow: "hidden",
           background: "#fff",
         }}
       >
         {children}
       </div>
+    </>
+  );
+}
+
+/* ---------- Escena con capturas (T24: prueba real con la app del banco) ---------- */
+
+const PUNTOS_EVIDENCIA = ["Monto: $0.01", "Concepto del negocio", "QR CoDi válido"];
+
+/**
+ * Las capturas (ya limpias por video/evidencias/limpiar.mjs) entran una tras otra en teléfonos a la
+ * derecha; a la izquierda, el rótulo de la prueba y lo que el banco reconoce.
+ */
+function EscenaCapturas({ escena, imagenes }: { escena: Escena; imagenes: Imagen[] }) {
+  const frame = useCurrentFrame();
+  const { fps, durationInFrames } = useVideoConfig();
+  const inicio = segundosAFrames(TARJETA) - 6;
+  // La segunda captura entra cuando la voz llega al banco (~40 % de la escena).
+  const separacion = Math.max(segundosAFrames(2.5), Math.round(durationInFrames * 0.38));
+  const alto = 800;
+  const arriba = 54;
+  const hueco = 56;
+  const anchos = imagenes.map((im) => Math.round((alto * im.ancho) / im.alto));
+  const total = anchos.reduce((s, a) => s + a, 0) + hueco * (imagenes.length - 1);
+  const derecha = 1920 - 150;
+  const texto = spring({ frame: frame - inicio, fps, config: { damping: 200 }, durationInFrames: 24 });
+  return (
+    <AbsoluteFill style={{ background: FONDO_CELULAR }}>
+      {imagenes.map((im, i) => {
+        const izq = derecha - total + anchos.slice(0, i).reduce((s, a) => s + a + hueco, 0);
+        const a = spring({ frame: frame - inicio - i * separacion, fps, config: { damping: 200 }, durationInFrames: 28 });
+        // Un acercamiento muy lento mientras está en pantalla (sin recortar datos de la captura).
+        const deriva = interpolate(frame, [inicio, durationInFrames], [1, 1.02], { extrapolateLeft: "clamp", extrapolateRight: "clamp" });
+        return (
+          <AbsoluteFill
+            key={im.src}
+            style={{ opacity: a, transform: `translateY(${(1 - a) * 70}px) scale(${deriva})`, transformOrigin: "75% 45%" }}
+          >
+            <Telefono izq={izq} arriba={arriba} ancho={anchos[i] ?? 0} alto={alto}>
+              <Img src={staticFile(im.src)} style={{ width: "100%", height: "100%", objectFit: "cover" }} />
+            </Telefono>
+          </AbsoluteFill>
+        );
+      })}
+      <div
+        style={{
+          position: "absolute",
+          left: 150,
+          top: 190,
+          width: 1920 - 150 - total - 150 - 90,
+          opacity: texto,
+          transform: `translateY(${(1 - texto) * 30}px)`,
+        }}
+      >
+        <div style={{ display: "flex", alignItems: "center", gap: 18 }}>
+          <Marca tam={46} />
+          <span style={{ fontSize: 28, fontWeight: 600, letterSpacing: 4, color: COLOR.oro, textTransform: "uppercase" }}>
+            {escena.etiqueta ?? escena.titulo}
+          </span>
+        </div>
+        <div style={{ marginTop: 26, fontSize: 70, fontWeight: 700, letterSpacing: -1.5, lineHeight: 1.06, color: COLOR.tinta }}>
+          Un QR CoDi real, leído por el banco
+        </div>
+        {escena.rotulo ? (
+          <div
+            style={{
+              marginTop: 36,
+              display: "inline-block",
+              padding: "14px 26px",
+              borderRadius: 999,
+              background: COLOR.tinta,
+              color: COLOR.fondo,
+              fontSize: 30,
+              fontWeight: 600,
+            }}
+          >
+            {escena.rotulo}
+          </div>
+        ) : null}
+        <div style={{ marginTop: 40, display: "flex", flexDirection: "column", gap: 18 }}>
+          {PUNTOS_EVIDENCIA.map((p, i) => {
+            const b = spring({ frame: frame - inicio - separacion - 10 - i * 10, fps, config: { damping: 200 }, durationInFrames: 18 });
+            return (
+              <div key={p} style={{ display: "flex", alignItems: "center", gap: 16, opacity: b, transform: `translateX(${(1 - b) * -20}px)` }}>
+                <div style={{ width: 14, height: 14, borderRadius: 7, background: COLOR.oro }} />
+                <span style={{ fontSize: 34, fontWeight: 500, color: COLOR.tinta }}>{p}</span>
+              </div>
+            );
+          })}
+        </div>
+      </div>
+      <Tarjeta escena={escena} fps={fps} />
     </AbsoluteFill>
   );
 }
@@ -176,7 +287,7 @@ function Tarjeta({ escena, fps }: { escena: Escena; fps: number }) {
       <div style={{ display: "flex", alignItems: "center", gap: 28, opacity: entrada }}>
         <Marca tam={88} entrada={entrada} />
         <span style={{ fontSize: 34, fontWeight: 600, letterSpacing: 4, color: COLOR.oro, textTransform: "uppercase" }}>
-          {escena.numero === 0 ? "Handle" : `Escena ${escena.numero}`}
+          {escena.etiqueta ?? (escena.numero === 0 ? "Handle" : `Escena ${escena.numero}`)}
         </span>
       </div>
       <div
