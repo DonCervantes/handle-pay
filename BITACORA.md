@@ -61,6 +61,20 @@ Así se ha trabajado en este repo; síguela para que los dos trabajemos igual.
 
 ---
 
+## 2026-11-07 · HND-062 Deploy: preparación con agentes (en curso)
+
+- Rama base nueva **`deploy-hnd-062`** (desde `main` tras el PR #1). `PLAN-DE-TRABAJO.md` tiene las tareas
+  T9–T12: CI en GitHub Actions + workflow de deploy manual (T9), scripts de producción para Supabase Auth/SMTP y
+  secretos de Cloudflare en modo simulación (T10), `/api/health` + smoke test post-deploy (T11) y runbook
+  `DEPLOY.md` (T12).
+- 3 agentes (`agente-5` a `agente-7`) con la misma metodología. **Tienen prohibido** desplegar, iniciar sesión en
+  Cloudflare, cambiar Supabase Auth, tocar el portal de Pey o mover dinero: solo preparan y prueban en local.
+- **Lo que necesita Dylan para publicar** (no lo puede hacer un agente): cuenta de Cloudflare (`wrangler login` o
+  API token), dominio, cuenta SMTP (p. ej. Resend) con DNS verificado, crear el webhook en portal.mipey.mx, pago
+  real de $0.01 y rotar llaves (Pey, Supabase secret, tokens expuestos).
+
+---
+
 ## 2026-11-07 · Migraciones aplicadas, todo verificado y PR #1 mergeado a `main`
 
 - **Token:** `SUPABASE_ACCESS_TOKEN` funcional (token con alcance del compañero; el primero no tenía permisos).
