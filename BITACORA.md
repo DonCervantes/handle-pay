@@ -10,6 +10,57 @@ rama, qué cambió, cómo se verificó y qué queda pendiente o bloqueado.
 
 ---
 
+## Metodología de trabajo con agentes (Claude Code)
+
+Así se ha trabajado en este repo; síguela para que los dos trabajemos igual.
+
+### Roles
+
+- **Coordinador:** la sesión principal de Claude Code que abres tú. No programa las tareas grandes:
+  reparte, revisa, integra, aplica migraciones y mantiene esta bitácora.
+- **Agentes:** sesiones hijas que lanza el coordinador (herramienta Agent con `isolation: "worktree"`).
+  Cada uno trabaja en su propia copia del repo (`.claude/worktrees/…`) y en su propia rama
+  (`agente-1`, `agente-2`, …), así nunca se pisan los archivos.
+
+### Flujo
+
+1. **Plan:** las tareas viven en [`PLAN-DE-TRABAJO.md`](PLAN-DE-TRABAJO.md) con ID (T1, T2…), ticket,
+   dependencias y archivos principales. Antes de lanzar agentes, agrega ahí las tareas nuevas.
+2. **Lanzar agentes:** un prompt idéntico para todos, cambiando solo número de agente y puerto
+   (8081, 8082…). El prompt les pide leer `PLAN-DE-TRABAJO.md`, esta bitácora, `AGENTS.md` y
+   `docs/05-estado-del-proyecto.md` antes de tocar código, y escalonar su arranque unos segundos.
+3. **Reclamar tareas:** el tablero es la carpeta `.claude/tablero/` del checkout principal (no se
+   versiona). Un agente reclama con `mkdir .claude/tablero/T<n>`; como `mkdir` es atómico, si falla es
+   que otro ya la tiene. Dentro escribe `estado`: `agente-N · en curso`, `lista · commit <sha>` o
+   `bloqueada: <motivo>`. Al terminar una tarea reclama la siguiente libre hasta que no quede ninguna.
+4. **Probar antes de commit (obligatorio):** `npx bun run test`, `npx tsc --noEmit`, `npx bun run build`
+   y la prueba propia de la tarea (Playwright headless para UI, archivo en `supabase/tests/` con
+   `raise exception 'OK'` para SQL). Sin pruebas verdes no hay commit. Un commit por tarea.
+5. **Integrar:** el coordinador mergea cada rama `agente-N` en la rama de integración, vuelve a correr
+   todas las pruebas, actualiza esta bitácora y sube la rama a GitHub.
+6. **Migraciones:** los agentes solo escriben el archivo (nombre `20261108040000 + agente*100 + n` para no
+   chocar) y su prueba. El coordinador las aplica en orden a Supabase, regenera `types.ts` y corre los
+   advisors. Razón: la base es compartida y una migración afecta a todos al instante.
+
+### Reglas que nunca se rompen
+
+- No push ni force push a `main` (está conectado a Lovable). Todo entra por PR.
+- `PAYMENTS_PROVIDER="mock"` siempre en desarrollo: Pey no tiene sandbox.
+- Los agentes no copian ni imprimen el `.env`; lo cargan con `set -a; source <ruta>/.env; set +a`.
+- Datos de prueba en la base compartida solo con correos `*@e2e.handle-prueba.mx` y nombres `E2E…`.
+- Los agentes no editan `BITACORA.md` ni `PLAN-DE-TRABAJO.md`: entregan un párrafo en su reporte y el
+  coordinador lo consolida (así no hay conflictos de merge en estos archivos).
+
+### Cómo retomarlo tú
+
+1. `git fetch && git checkout integracion-fase-4-5` (o la rama de integración vigente) y lee esta bitácora.
+2. Pide el `.env` por un canal privado; nunca va al repo.
+3. Abre Claude Code en `handle-pay/` y pídele: "lee BITACORA.md y PLAN-DE-TRABAJO.md, crea
+   `.claude/tablero/`, marca como reclamadas las tareas ya listas y lanza N agentes con la metodología de
+   la bitácora".
+
+---
+
 ## 2026-11-07 · Plan de trabajo y 4 agentes en paralelo (en curso)
 
 **Autor:** Dylan (con Claude Code como coordinador)
