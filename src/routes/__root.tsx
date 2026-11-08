@@ -80,8 +80,12 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
     meta: [
       { charSet: "utf-8" },
       { name: "viewport", content: "width=device-width, initial-scale=1" },
-      { title: "Handle — ERP ligero para PyMEs" },
-      { name: "description", content: "Finanzas, pagos a proveedores, clientes y colaboradores en un solo lugar." },
+      { title: "Handle — Cobros CoDi y puntos para tu changarro" },
+      {
+        name: "description",
+        content:
+          "Cobra con CoDi desde tu celular, sin terminal ni comisiones de tarjeta, premia a tus clientes con puntos y aparece en el mapa de changarros de tu colonia.",
+      },
       { property: "og:type", content: "website" },
       { name: "twitter:card", content: "summary_large_image" },
     ],

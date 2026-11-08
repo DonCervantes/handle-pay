@@ -84,11 +84,9 @@ function ApiPage() {
   const copy = (t: string) => navigator.clipboard.writeText(t).then(() => toast.success("Copiado"));
 
   const endpoints = [
-    { method: "GET", path: "/api/v1/transactions", desc: "Lista ingresos y egresos de tu organización. Parámetros: limit (1–200), type (income|expense).", status: "Disponible",
+    { method: "GET", path: "/api/v1/transactions", desc: "Lista los gastos e ingresos que anotaste en Gastos y cuentas. Parámetros: limit (1–200), type (income|expense).", status: "Disponible",
       curl: `curl ${origin}/api/v1/transactions?limit=10 \\\n  -H "Authorization: Bearer hdl_live_..."` },
-    { method: "POST", path: "/api/v1/payments", desc: "Crea una orden de pago a proveedor (borrador).", status: "Próximamente",
-      curl: `curl -X POST ${origin}/api/v1/payments \\\n  -H "Authorization: Bearer hdl_live_..." \\\n  -H "Content-Type: application/json" \\\n  -d '{"supplier_id":"<uuid>","amount_fiat":1500}'` },
-    { method: "GET", path: "/api/v1/clients", desc: "Lista los clientes de tu CRM con estado y saldo.", status: "Próximamente",
+    { method: "GET", path: "/api/v1/clients", desc: "Lista tus clientes con su saldo.", status: "Próximamente",
       curl: `curl ${origin}/api/v1/clients \\\n  -H "Authorization: Bearer hdl_live_..."` },
   ];
 
@@ -96,7 +94,7 @@ function ApiPage() {
     <>
       <PageHeader
         title="API para desarrolladores"
-        description="Conecta Handle con tu ERP, e-commerce o automatizaciones mediante la Handle API v1."
+        description="Conecta Handle con tu punto de venta, tienda en línea o automatizaciones mediante la Handle API v1."
         actions={<Button onClick={() => setNewOpen(true)}><Plus /> Generar nueva API key</Button>}
       />
 
@@ -131,11 +129,11 @@ function ApiPage() {
 
       <h2 className="mb-1 text-lg font-bold">Handle API v1</h2>
       <p className="mb-4 text-sm text-muted-foreground">
-        Autentica cada solicitud con el encabezado <code className="font-mono">Authorization: Bearer hdl_live_...</code>. Las respuestas son JSON.
+        Autentica cada solicitud con el encabezado <code className="break-all font-mono">Authorization: Bearer hdl_live_...</code>. Las respuestas son JSON.
       </p>
       <div className="grid gap-4">
         {endpoints.map((e) => (
-          <Card key={e.path} className="shadow-card">
+          <Card key={e.path} className="min-w-0 shadow-card">
             <CardContent className="space-y-3 p-5">
               <div className="flex flex-wrap items-center gap-2">
                 <Badge variant="outline" className="font-mono">{e.method}</Badge>

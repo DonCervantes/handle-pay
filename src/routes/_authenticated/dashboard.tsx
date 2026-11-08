@@ -1,140 +1,344 @@
-import { createFileRoute } from "@tanstack/react-router";
-import { useSuspenseQuery } from "@tanstack/react-query";
-import { Area, AreaChart, CartesianGrid, ResponsiveContainer, Tooltip, XAxis, YAxis } from "recharts";
-import { ArrowDownRight, ArrowUpRight, Users, UserCog, Wallet } from "lucide-react";
+import { createFileRoute, Link } from "@tanstack/react-router";
+import { useQuery } from "@tanstack/react-query";
+import { Bar, BarChart, CartesianGrid, ResponsiveContainer, Tooltip, XAxis, YAxis } from "recharts";
+import { Gift, QrCode, Receipt, Repeat, Ticket, TrendingDown, TrendingUp, Wallet } from "lucide-react";
+import type { ComponentType, ReactNode } from "react";
+import { supabase } from "@/integrations/supabase/client";
 import { PageHeader } from "@/components/page-header";
+import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { FinanceAssistant } from "@/components/finance-assistant";
-import { StatusBadge } from "@/components/status-badge";
-import { accountsQuery, clientsQuery, employeesQuery, transactionsQuery } from "@/lib/data";
-import { formatDate, formatMXN } from "@/lib/format";
-import { pageMeta } from "@/lib/metadata";
-import { DirectoryLoading, DirectoryError } from "@/components/directory-feedback";
+import { Skeleton } from "@/components/ui/skeleton";
 import { AvisoExpediente } from "@/components/aviso-expediente";
-import { VentasDelDia } from "@/components/ventas-del-dia";
+import { formatMXN } from "@/lib/format";
+import { pageMeta } from "@/lib/metadata";
+import { meQuery } from "@/lib/session";
+import { puedeEntrar } from "@/lib/roles";
+import {
+  calcularResumen,
+  cobrado,
+  DIAS_RESUMEN,
+  inicioDeDia,
+  type CobroResumen,
+  type MovimientoResumen,
+} from "@/lib/resumen";
 
 export const Route = createFileRoute("/_authenticated/dashboard")({
-  loader: async ({ context }) => { await Promise.all([context.queryClient.ensureQueryData(accountsQuery), context.queryClient.ensureQueryData(transactionsQuery), context.queryClient.ensureQueryData(clientsQuery), context.queryClient.ensureQueryData(employeesQuery)]); },
-  head: () => pageMeta("Dashboard", "Resumen financiero y actividad de tu empresa en Handle."),
-  pendingComponent: DirectoryLoading,
-  errorComponent: DirectoryError,
-  notFoundComponent: () => <p>No se encontró esta página.</p>,
-  component: Dashboard,
+  head: () =>
+    pageMeta("Resumen", "Ventas de hoy, cobros CoDi, puntos y clientes que regresan a tu changarro."),
+  component: Resumen,
 });
 
-function Dashboard() {
-  const { data: accounts = [] } = useSuspenseQuery(accountsQuery);
-  const { data: tx = [] } = useSuspenseQuery(transactionsQuery);
-  const { data: clients = [] } = useSuspenseQuery(clientsQuery);
-  const { data: employees = [] } = useSuspenseQuery(employeesQuery);
+const puntosFmt = new Intl.NumberFormat("es-MX", { maximumFractionDigits: 0 });
+const horaFmt = new Intl.DateTimeFormat("es-MX", { hour: "numeric", minute: "2-digit" });
+/** Eje de la gráfica: $450, $1.4k, $2k. */
+function ejeMonto(v: number) {
+  if (v < 1000) return `$${Math.round(v)}`;
+  const miles = Math.round(v / 100) / 10;
+  return `$${Number.isInteger(miles) ? miles : miles.toFixed(1)}k`;
+}
+const diaFmt = new Intl.DateTimeFormat("es-MX", { day: "numeric", month: "short" });
 
-  const now = new Date();
-  const thisMonth = tx.filter((t) => {
-    const d = new Date(t.occurred_at);
-    return d.getMonth() === now.getMonth() && d.getFullYear() === now.getFullYear();
-  });
-  const sum = (list: typeof tx, type: string) =>
-    list.filter((t) => t.type === type).reduce((a, t) => a + Number(t.amount), 0);
-  const balance = accounts.reduce((a, x) => a + Number(x.balance), 0);
+/** Cobros pagados y movimientos de puntos de los últimos 30 días (RLS: solo la org propia). */
+const resumenQuery = {
+  queryKey: ["resumen-negocio"],
+  refetchInterval: 30_000,
+  queryFn: async () => {
+    const desde = inicioDeDia(new Date(), DIAS_RESUMEN - 1).toISOString();
+    const [cobros, movimientos] = await Promise.all([
+      supabase
+        .from("charges")
+        .select(
+          "id, monto, descuento_puntos, paid_at, customer_id, profiles(full_name), customers(nombre)",
+        )
+        .eq("estado", "pagado")
+        .gte("paid_at", desde)
+        .order("paid_at", { ascending: false })
+        .limit(2000),
+      supabase
+        .from("point_transactions")
+        .select("tipo, puntos, created_at")
+        .gte("created_at", desde)
+        .limit(5000),
+    ]);
+    if (cobros.error) throw cobros.error;
+    if (movimientos.error) throw movimientos.error;
+    const filas: CobroResumen[] = (cobros.data ?? []).map((c) => ({
+      id: c.id,
+      monto: c.monto,
+      descuento_puntos: c.descuento_puntos,
+      paid_at: c.paid_at,
+      customer_id: c.customer_id,
+      cajero: c.profiles?.full_name ?? null,
+      cliente: c.customers?.nombre ?? null,
+    }));
+    return { cobros: filas, movimientos: (movimientos.data ?? []) as MovimientoResumen[] };
+  },
+};
 
-  const months = [2, 1, 0].map((back) => {
-    const d = new Date(now.getFullYear(), now.getMonth() - back, 1);
-    const items = tx.filter((t) => {
-      const o = new Date(t.occurred_at);
-      return o.getMonth() === d.getMonth() && o.getFullYear() === d.getFullYear();
-    });
-    return {
-      mes: d.toLocaleDateString("es-MX", { month: "short" }),
-      Ingresos: sum(items, "income"),
-      Egresos: sum(items, "expense"),
-    };
-  });
-
-  const stats = [
-    { label: "Saldo total", value: formatMXN(balance), icon: Wallet },
-    { label: "Ingresos del mes", value: formatMXN(sum(thisMonth, "income")), icon: ArrowUpRight, tone: "text-success" },
-    { label: "Egresos del mes", value: formatMXN(sum(thisMonth, "expense")), icon: ArrowDownRight, tone: "text-destructive" },
-    { label: "Clientes", value: String(clients.length), icon: Users },
-    { label: "Colaboradores", value: String(employees.length), icon: UserCog },
-  ];
+function Resumen() {
+  const { data: me } = useQuery(meQuery);
+  const q = useQuery(resumenQuery);
+  const puedeCobrar = puedeEntrar(me?.role, "/caja");
 
   return (
     <>
-      <PageHeader title="Dashboard" description="Un vistazo a la salud de tu negocio." />
+      <PageHeader
+        title="Resumen"
+        description="Cómo va tu changarro hoy y en los últimos 30 días."
+        actions={
+          puedeCobrar ? (
+            <Button asChild size="lg">
+              <Link to="/caja">
+                <QrCode /> Cobrar
+              </Link>
+            </Button>
+          ) : undefined
+        }
+      />
       <AvisoExpediente />
-      <VentasDelDia />
-      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-5">
-        {stats.map((s) => (
-          <Card key={s.label} className="shadow-card">
-            <CardContent className="p-5">
-              <div className="flex items-center justify-between text-sm text-muted-foreground">
-                {s.label}
-                <s.icon className={`size-4 ${s.tone ?? ""}`} />
-              </div>
-              <p className="tabular mt-3 break-words text-xl font-bold">{s.value}</p>
+      {q.isError ? (
+        <Card className="shadow-card">
+          <CardContent className="flex flex-col items-start gap-3 p-6">
+            <p className="font-medium">No pudimos cargar tu resumen.</p>
+            <p className="text-sm text-muted-foreground">Revisa tu conexión e intenta de nuevo.</p>
+            <Button variant="outline" onClick={() => q.refetch()}>
+              Reintentar
+            </Button>
+          </CardContent>
+        </Card>
+      ) : !q.data ? (
+        <CargandoResumen />
+      ) : (
+        <Contenido cobros={q.data.cobros} movimientos={q.data.movimientos} />
+      )}
+    </>
+  );
+}
+
+function Contenido({
+  cobros,
+  movimientos,
+}: {
+  cobros: CobroResumen[];
+  movimientos: MovimientoResumen[];
+}) {
+  const r = calcularResumen(cobros, movimientos);
+  const cambio = r.hoy.cambioVsAyer;
+
+  return (
+    <div className="space-y-6">
+      <section aria-labelledby="titulo-hoy">
+        <h2 id="titulo-hoy" className="mb-3 text-sm font-semibold uppercase tracking-wide text-muted-foreground">
+          Hoy
+        </h2>
+        <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
+          <Cifra
+            etiqueta="Ventas de hoy"
+            valor={formatMXN(r.hoy.ventas)}
+            icono={Wallet}
+            destacada
+            className="col-span-2 lg:col-span-1"
+            nota={
+              cambio === null ? (
+                "Sin ventas ayer para comparar"
+              ) : (
+                <span className={cambio >= 0 ? "text-success" : "text-destructive"}>
+                  {cambio >= 0 ? (
+                    <TrendingUp className="mr-1 inline size-3.5" />
+                  ) : (
+                    <TrendingDown className="mr-1 inline size-3.5" />
+                  )}
+                  {cambio >= 0 ? "+" : ""}
+                  {cambio}% vs. ayer
+                </span>
+              )
+            }
+          />
+          <Cifra etiqueta="Cobros CoDi" valor={String(r.hoy.cobros)} icono={Receipt} nota="Pagados hoy" />
+          <Cifra
+            etiqueta="Ticket promedio"
+            valor={r.hoy.ticketPromedio === null ? "—" : formatMXN(r.hoy.ticketPromedio)}
+            icono={Ticket}
+            nota="Por cobro"
+          />
+          <Card className="col-span-2 shadow-card lg:col-span-1">
+            <CardContent className="p-4 sm:p-5">
+              <p className="text-sm text-muted-foreground">Por cajero</p>
+              {r.hoy.porCajero.length === 0 ? (
+                <p className="mt-2 text-sm text-muted-foreground">Sin cobros todavía</p>
+              ) : (
+                <ul className="mt-2 space-y-1 text-sm">
+                  {r.hoy.porCajero.map((c) => (
+                    <li key={c.nombre} className="flex justify-between gap-2">
+                      <span className="truncate">{c.nombre}</span>
+                      <span className="tabular-nums font-medium">{formatMXN(c.total)}</span>
+                    </li>
+                  ))}
+                </ul>
+              )}
             </CardContent>
           </Card>
-        ))}
-      </div>
+        </div>
+      </section>
 
-      <div className="mt-6 grid gap-6 lg:grid-cols-3">
+      <section aria-labelledby="titulo-mes">
+        <h2 id="titulo-mes" className="mb-3 text-sm font-semibold uppercase tracking-wide text-muted-foreground">
+          Últimos {DIAS_RESUMEN} días
+        </h2>
+        <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
+          <Cifra
+            etiqueta="Ventas"
+            valor={formatMXN(r.periodo.ventas)}
+            icono={Wallet}
+            nota={`${r.periodo.cobros} cobros`}
+          />
+          <Cifra
+            etiqueta="Puntos entregados"
+            valor={puntosFmt.format(r.periodo.puntosEmitidos)}
+            icono={Gift}
+            nota="Ganados por tus clientes"
+          />
+          <Cifra
+            etiqueta="Puntos canjeados"
+            valor={puntosFmt.format(r.periodo.puntosCanjeados)}
+            icono={Gift}
+            nota={`${formatMXN(r.periodo.puntosCanjeados)} de descuento`}
+          />
+          <Cifra
+            etiqueta="Clientes que regresan"
+            valor={`${r.periodo.recurrentes} de ${r.periodo.clientes}`}
+            icono={Repeat}
+            nota={
+              r.periodo.porcentajeRecurrentes === null
+                ? "Aún sin clientes con puntos"
+                : `${r.periodo.porcentajeRecurrentes}% compró 2 veces o más`
+            }
+          />
+        </div>
+      </section>
+
+      <div className="grid gap-6 lg:grid-cols-3">
         <Card className="shadow-card lg:col-span-2">
           <CardHeader>
-            <CardTitle className="text-base">Ingresos vs egresos</CardTitle>
-            <p className="text-sm text-muted-foreground">Últimos 3 meses</p>
+            <CardTitle className="text-base">Ventas por día</CardTitle>
+            <p className="text-sm text-muted-foreground">Lo cobrado por CoDi, sin contar el descuento en puntos</p>
           </CardHeader>
-          <CardContent className="h-72">
+          <CardContent className="h-64 sm:h-72">
             <ResponsiveContainer width="100%" height="100%">
-              <AreaChart data={months} margin={{ left: 0, right: 8 }}>
-                <defs>
-                  <linearGradient id="gi" x1="0" y1="0" x2="0" y2="1">
-                    <stop offset="0%" stopColor="var(--chart-1)" stopOpacity={0.35} />
-                    <stop offset="100%" stopColor="var(--chart-1)" stopOpacity={0} />
-                  </linearGradient>
-                  <linearGradient id="ge" x1="0" y1="0" x2="0" y2="1">
-                    <stop offset="0%" stopColor="var(--chart-2)" stopOpacity={0.3} />
-                    <stop offset="100%" stopColor="var(--chart-2)" stopOpacity={0} />
-                  </linearGradient>
-                </defs>
+              <BarChart data={r.ventasPorDia} margin={{ left: 0, right: 8 }}>
                 <CartesianGrid vertical={false} stroke="var(--border)" />
-                <XAxis dataKey="mes" tickLine={false} axisLine={false} stroke="var(--muted-foreground)" fontSize={12} />
-                <YAxis tickLine={false} axisLine={false} stroke="var(--muted-foreground)" fontSize={12} tickFormatter={(v) => `$${Math.round(v / 1000)}k`} />
-                <Tooltip
-                  formatter={(v: number) => formatMXN(v)}
-                  contentStyle={{ background: "var(--popover)", border: "1px solid var(--border)", borderRadius: 8, color: "var(--popover-foreground)" }}
+                <XAxis
+                  dataKey="etiqueta"
+                  tickLine={false}
+                  axisLine={false}
+                  stroke="var(--muted-foreground)"
+                  fontSize={12}
+                  interval="preserveStartEnd"
+                  minTickGap={16}
                 />
-                <Area type="monotone" dataKey="Ingresos" stroke="var(--chart-1)" strokeWidth={2} fill="url(#gi)" />
-                <Area type="monotone" dataKey="Egresos" stroke="var(--chart-2)" strokeWidth={2} fill="url(#ge)" />
-              </AreaChart>
+                <YAxis
+                  tickLine={false}
+                  axisLine={false}
+                  stroke="var(--muted-foreground)"
+                  fontSize={12}
+                  width={48}
+                  tickFormatter={ejeMonto}
+                />
+                <Tooltip
+                  formatter={(v: number) => [formatMXN(v), "Ventas"]}
+                  cursor={{ fill: "var(--muted)" }}
+                  contentStyle={{
+                    background: "var(--popover)",
+                    border: "1px solid var(--border)",
+                    borderRadius: 8,
+                    color: "var(--popover-foreground)",
+                  }}
+                />
+                <Bar dataKey="total" fill="var(--chart-1)" radius={[4, 4, 0, 0]} maxBarSize={28} />
+              </BarChart>
             </ResponsiveContainer>
           </CardContent>
         </Card>
+
         <Card className="shadow-card">
           <CardHeader>
-            <CardTitle className="text-base">Movimientos recientes</CardTitle>
+            <CardTitle className="text-base">Últimos cobros</CardTitle>
           </CardHeader>
-          <CardContent className="space-y-4">
-            {tx.slice(0, 6).map((t) => (
-              <div key={t.id} className="flex items-center justify-between gap-3 text-sm">
-                <div className="min-w-0">
-                  <p className="truncate font-medium">{t.description ?? t.category}</p>
-                  <p className="text-xs text-muted-foreground">{formatDate(t.occurred_at)}</p>
-                </div>
-                <div className="text-right">
-                  <p className={`tabular font-medium ${t.type === "income" ? "text-success" : ""}`}>
-                    {t.type === "income" ? "+" : "−"}
-                    {formatMXN(t.amount)}
-                  </p>
-                  <StatusBadge status={t.type} className="mt-1" />
-                </div>
-              </div>
-            ))}
+          <CardContent>
+            {r.ultimos.length === 0 ? (
+              <p className="text-sm text-muted-foreground">
+                Aún no hay cobros pagados. Cuando cobres en la Caja, aparecerán aquí.
+              </p>
+            ) : (
+              <ul className="space-y-4">
+                {r.ultimos.map((c) => (
+                  <li key={c.id} className="flex items-center justify-between gap-3 text-sm">
+                    <div className="min-w-0">
+                      <p className="truncate font-medium">{c.cliente ?? "Venta sin cliente"}</p>
+                      <p className="text-xs text-muted-foreground">
+                        {diaFmt.format(new Date(c.paid_at!))} · {horaFmt.format(new Date(c.paid_at!))}
+                        {c.cajero ? ` · ${c.cajero}` : ""}
+                      </p>
+                    </div>
+                    <div className="text-right">
+                      <p className="tabular-nums font-medium">{formatMXN(cobrado(c))}</p>
+                      {Number(c.descuento_puntos) > 0 && (
+                        <p className="text-xs text-gold">−{puntosFmt.format(Number(c.descuento_puntos))} pts</p>
+                      )}
+                    </div>
+                  </li>
+                ))}
+              </ul>
+            )}
           </CardContent>
         </Card>
       </div>
-      <div className="mt-6">
-        <FinanceAssistant />
+    </div>
+  );
+}
+
+function Cifra({
+  etiqueta,
+  valor,
+  icono: Icono,
+  nota,
+  destacada = false,
+  className = "",
+}: {
+  etiqueta: string;
+  valor: string;
+  icono: ComponentType<{ className?: string }>;
+  nota?: ReactNode;
+  destacada?: boolean;
+  className?: string;
+}) {
+  return (
+    <Card className={`shadow-card ${className}`}>
+      <CardContent className="p-4 sm:p-5">
+        <div className="flex items-center justify-between gap-2 text-sm text-muted-foreground">
+          <span>{etiqueta}</span>
+          <Icono className="size-4 shrink-0" />
+        </div>
+        <p
+          className={`mt-2 break-words font-bold tabular-nums ${destacada ? "text-2xl sm:text-3xl" : "text-xl sm:text-2xl"}`}
+        >
+          {valor}
+        </p>
+        {nota && <p className="mt-1 text-xs text-muted-foreground">{nota}</p>}
+      </CardContent>
+    </Card>
+  );
+}
+
+function CargandoResumen() {
+  return (
+    <div className="space-y-6" aria-busy="true" aria-label="Cargando resumen">
+      <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
+        {Array.from({ length: 8 }, (_, i) => (
+          <Skeleton key={i} className="h-28 rounded-xl" />
+        ))}
       </div>
-    </>
+      <Skeleton className="h-72 rounded-xl" />
+    </div>
   );
 }
