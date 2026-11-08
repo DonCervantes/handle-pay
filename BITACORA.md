@@ -61,6 +61,34 @@ Así se ha trabajado en este repo; síguela para que los dos trabajemos igual.
 
 ---
 
+## 2026-11-07 · Migraciones aplicadas, todo verificado y PR #1 mergeado a `main`
+
+- **Token:** `SUPABASE_ACCESS_TOKEN` funcional (token con alcance del compañero; el primero no tenía permisos).
+  Con él se aplican migraciones vía Management API (`POST /v1/projects/{ref}/database/query`).
+- **Migraciones aplicadas** en una sola transacción (Dylan ejecutó el comando) y registradas en
+  `supabase_migrations.schema_migrations`: `20261108030000_mapa_publico`, `20261108040201_seguridad_cobros_search_path`,
+  `20261108040301_job_vencer_cobros` (job `vencer-cobros-pendientes` activo cada 5 min) y `20261108040401_aceptacion_legal`.
+- **Pruebas SQL** contra la base real: las 4 de `supabase/tests/` responden `ERROR: OK` (no dejan datos).
+- **`types.ts` regenerado** desde Supabase (`/v1/projects/{ref}/types/typescript`); solo agrega `legal_acceptances`
+  respecto a lo escrito a mano.
+- **Advisors de seguridad:** nuevos y esperados `negocios_publicos()` (anon, intencional) y
+  `cliente_ligado_a_mi_org()` (helper de RLS). Los demás ya existían. Recomendado activar *Leaked password
+  protection* en Supabase Auth.
+- **Arreglo en E2E:** `e2e/puntos.spec.ts` buscaba "el" switch de `/negocio`, pero T7 agregó los del horario;
+  ahora apunta a `#regla-activo`.
+- **Verificación final:** Vitest 110/110, `tsc` 0 errores, build y `verificar:bundle` OK (3 secretos comparados),
+  **`bun run test:e2e` 8/8 contra la base real** (incluye las 3 del mapa y el cobro con cliente con T2).
+- **Backlog:** ✅ HND-050, 051, 052, 053, 060 y 116 (HND-005 y 115 ya estaban). HND-061 sigue sin ✅ hasta tener
+  los datos del responsable y la revisión legal.
+- **Merge:** PR #1 `integracion-fase-4-5` → `main` con merge commit (sin squash ni force push). Lovable recibe los
+  cambios desde `main`.
+
+**Siguiente para quien retome:** decisiones abiertas (textos legales, aceptación de cuentas existentes, si el
+dueño mueve su pin, dirección de personas físicas en el mapa, privacidad de `buscarCliente`, logo oficial) y
+HND-062 (deploy público: Site URL, SMTP propio, webhook de Pey, rotar llaves). Trabajar desde `main` en ramas nuevas.
+
+---
+
 ## 2026-11-07 · PR #1 abierto: `integracion-fase-4-5` → `main`
 
 - PR: https://github.com/DonCervantes/handle-pay/pull/1 (sin conflictos: `main` sigue en `2bb288c`).

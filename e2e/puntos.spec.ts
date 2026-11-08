@@ -77,7 +77,8 @@ test.describe("dueña del negocio", () => {
     await page.getByLabel("Tope de puntos por compra").fill("");
     await page.getByLabel("Vencen tras días sin comprar").fill("365");
     await page.getByLabel("Máximo a pagar con puntos (%)").fill("50");
-    const activo = page.getByRole("switch");
+    // /negocio también tiene los interruptores del horario (T7): se apunta al del programa.
+    const activo = page.locator("#regla-activo");
     if ((await activo.getAttribute("aria-checked")) !== "true") await activo.click();
     // Vista previa con la regla: $200 a un cliente nuevo = 20 puntos.
     await expect(page.getByText("20 puntos", { exact: true })).toBeVisible();

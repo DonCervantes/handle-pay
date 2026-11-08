@@ -561,6 +561,30 @@ export type Database = {
           },
         ]
       }
+      legal_acceptances: {
+        Row: {
+          accepted_at: string
+          id: string
+          privacidad_version: string
+          terminos_version: string
+          user_id: string
+        }
+        Insert: {
+          accepted_at?: string
+          id?: string
+          privacidad_version: string
+          terminos_version: string
+          user_id: string
+        }
+        Update: {
+          accepted_at?: string
+          id?: string
+          privacidad_version?: string
+          terminos_version?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       organizations: {
         Row: {
           country: string
