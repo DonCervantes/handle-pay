@@ -61,7 +61,7 @@ Así se ha trabajado en este repo; síguela para que los dos trabajemos igual.
 
 ---
 
-## 2026-11-08 · Pulido de la demo (T21–T23, en curso)
+## 2026-11-08 · Pulido de la demo (T21–T23 listas; T24 evidencia en el video, en curso)
 
 - Estado al empezar: todo T1–T20 en `main` (PRs #1–#4), CI verde, video en el release `demo-video-2026-11-08`.
 - **Decisiones de Dylan:** unificar `/clientes` con los clientes de puntos; mostrar puntos redondeados hacia
@@ -69,6 +69,25 @@ Así se ha trabajado en este repo; síguela para que los dos trabajemos igual.
 - Rama base **`pulido-demo`**. 3 agentes (`agente-14` a `agente-16`): T21 `/clientes` con clientes reales,
   T22 puntos sin decimales en pantalla, T23 demo sin prefijo "Demo ·" visible + 2 expedientes KYB en revisión +
   `/red` sin negocios inactivos por defecto. Al terminar: integrar, probar, PR a `main` y merge con CI verde.
+- **T22 · Puntos sin decimales (agente-15, `691a811`):** `formatPuntos()`/`pisoPuntos()` en `src/lib/puntos.ts`
+  (piso: 130.99 → 130, 0.4 → 0). Canje solo enteros en caja y servidor (`z.int()`); sin canje con < 1 punto;
+  sin "Ganará 0 puntos". La base conserva el valor exacto. Nuevo `e2e/puntos-enteros.spec.ts`.
+- **T21 · `/clientes` con clientes reales (agente-14, `5facaf7`):** lista quienes compraron por CoDi o tienen
+  puntos en el changarro (nivel, compras, total neto, puntos, última visita), búsqueda/filtro/orden en la URL, y
+  ficha `/clientes/$id` con historial de cobros y puntos. Server functions `misClientes`/`fichaCliente` con
+  `exigirRol(ROLES_OFICINA)` y admin client filtrado por org. El directorio del ERP (`clients`) ya no se
+  muestra; la tabla sigue porque Finanzas la usa. Nuevo `e2e/clientes.spec.ts` (incluye acceso a otra org).
+- **T23 · Pulir la demo (agente-16, `2a4fcd3`):** sin "Demo ·" visible: una org es de demo si todos sus
+  miembros son `@demo.handle-prueba.mx` (cada changarro tiene su `dueno.<slug>@…`; `user_metadata.demo_handle`).
+  2 changarros **en revisión** (Cremería La Vaquita, Pollería El Gallo de Oro) con 4 PDF de ejemplo en `kyb`
+  (escena opcional 5b en `DEMO.md`; aprobar es irreversible → `demo:limpiar && demo:datos` para repetir).
+  `/red` → Aprobados oculta inactivos (`?inactivos=true` para verlos). `demo:limpiar` también borra Storage y
+  dejó intactos los datos ajenos (huella idéntica).
+- **Verificación tras integrar T21–T23 en `pulido-demo`:** Vitest 164/164, `tsc` 0 errores, build y
+  `verificar:bundle` OK, **E2E 21/21** contra la base real. Datos de demo resembrados al final.
+- **Decisiones para Dylan:** saldos < 1 punto se ven "0 pts" (¿ocultar?); la suma de movimientos redondeados
+  puede no cuadrar por 1 punto con el saldo; `/clientes` ya no permite altas manuales (los clientes nacen en la
+  caja); el nivel es global del cliente; Aprobados muestra 14 (Tienda Prueba Pey y un E2E siguen activos).
 
 ---
 
