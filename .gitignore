@@ -46,3 +46,8 @@ docs/soporte-pey-pago-no-registrado.md
 # Resultados de Playwright (E2E)
 test-results/
 playwright-report/
+
+# Archivos del video (pesados, no se versionan)
+video/media/
+video/node_modules/
+video/out/
