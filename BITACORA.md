@@ -61,6 +61,22 @@ Así se ha trabajado en este repo; síguela para que los dos trabajemos igual.
 
 ---
 
+## 2026-11-07 · PR #1 abierto: `integracion-fase-4-5` → `main`
+
+- PR: https://github.com/DonCervantes/handle-pay/pull/1 (sin conflictos: `main` sigue en `2bb288c`).
+- **Dylan autorizó el merge cuando todo esté listo y aprobado.** Criterio de "aprobado":
+  1. Migraciones de `supabase/pendientes/` aplicadas por el compañero y sus 4 pruebas SQL con `ERROR: OK`.
+  2. Vitest, `tsc`, build y `verificar:bundle` en verde.
+  3. `bun run test:e2e` en verde, incluidas las 3 pruebas del mapa.
+- **No mergear antes de aplicar las migraciones:** el código de T2 llama a `asignar_cliente_cobro()`; sin ella,
+  la app de Lovable cancelaría los cobros con cliente.
+- El coordinador (sesión de Dylan) vigila la base cada 2 min y, al detectar las migraciones, corre las pruebas,
+  mergea el PR (merge commit, sin squash ni force push) y lo anota aquí.
+- `types.ts` no se puede regenerar sin un token de Supabase con permisos: las entradas nuevas se escribieron a
+  mano y bastan para compilar. Regenerarlo cuando haya token o con `supabase gen types` del compañero.
+
+---
+
 ## 2026-11-07 · T2 integrado y migraciones empaquetadas para aplicar a mano
 
 - El `SUPABASE_ACCESS_TOKEN` recibido no tiene permisos (403: `database_read`, `projects_read`), así que las
