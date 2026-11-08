@@ -8,6 +8,7 @@
     "build": "vite build",
     "build:dev": "vite build --mode development",
     "verificar:bundle": "node scripts/verificar-bundle.mjs",
+    "smoke:prod": "node scripts/smoke-prod.mjs",
     "preview": "vite preview",
     "lint": "eslint .",
     "format": "prettier --write .",
