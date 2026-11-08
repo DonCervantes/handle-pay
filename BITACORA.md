@@ -61,6 +61,21 @@ Así se ha trabajado en este repo; síguela para que los dos trabajemos igual.
 
 ---
 
+## 2026-11-07 · Demo: integrado T15 (pantallas heredadas)
+
+- **T15 (agente-9, `c53ae20`):** `/dashboard` pasa a "Resumen" con métricas de Handle: hoy (ventas CoDi vs
+  ayer, cobros, ticket promedio, ventas por cajero) y 30 días (ventas, puntos entregados y canjeados, clientes que
+  regresan, gráfica por día, últimos cobros). Lee `charges` y `point_transactions` con RLS; cálculos puros en
+  `src/lib/resumen.ts` (7 pruebas). Menú sin "Pagos a proveedores" (la ruta `/pagos` queda sin enlace),
+  "Finanzas" → "Gastos y cuentas" (con el asistente de IA), `/api` sin el endpoint de proveedores y sin desborde
+  en celular, título y meta description de Handle. Recorrido Playwright por rol (escritorio y celular): 32
+  capturas, 0 errores de consola, 0 desbordes.
+- **Verificación tras integrar en `demo-solida`:** Vitest 121/121, `tsc` 0 errores, build y `verificar:bundle` OK.
+- **Decisiones para Dylan:** ¿borrar `/pagos` del todo? `/clientes` sigue siendo el directorio del ERP (tabla
+  `clients`), distinto de los clientes con puntos (`customers`): unificar o esconder para la demo.
+
+---
+
 ## 2026-11-07 · Demo sólida en local y video: diagnóstico y tareas T13–T20 (en curso)
 
 - PR #2 (preparación del deploy) mergeado a `main` por Dylan. **Decisión:** la demo se hace en local (modo
