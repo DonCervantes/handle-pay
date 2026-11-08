@@ -2,7 +2,8 @@ import { createFileRoute, Link } from "@tanstack/react-router";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
 import { useState } from "react";
-import { ArrowLeft, Check, ExternalLink, Eye, Loader2, X } from "lucide-react";
+import { ArrowLeft, Check, ExternalLink, Eye, Loader2, MapPin, Star, X } from "lucide-react";
+import maplibreCss from "maplibre-gl/dist/maplibre-gl.css?url";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { PageHeader } from "@/components/page-header";
@@ -10,15 +11,23 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
+import { Switch } from "@/components/ui/switch";
 import { StatusBadge } from "@/components/status-badge";
+import { SelectorUbicacion } from "@/components/selector-ubicacion";
 import { CATEGORIAS, DOCUMENTOS } from "@/lib/kyb";
 import { abrirDocumento, documentosQuery } from "@/lib/negocio-data";
 import { revisarExpediente } from "@/lib/kyb.functions";
+import { marcarRecomendado, moverPin } from "@/lib/mapa.functions";
+import { errorCoordenada, pinCambio, redondearCoordenada, type Coordenada } from "@/lib/pin";
 import { formatDate } from "@/lib/format";
 import { pageMeta } from "@/lib/metadata";
 
 export const Route = createFileRoute("/_authenticated/red/$id")({
-  head: () => pageMeta("Revisar expediente", "Revisión del expediente KYB de un negocio."),
+  head: () => ({
+    ...pageMeta("Revisar expediente", "Revisión del expediente KYB de un negocio."),
+    // Para el mapa de "Mover pin" (HND-115).
+    links: [{ rel: "stylesheet", href: maplibreCss }],
+  }),
   component: RevisarExpediente,
 });
 
@@ -128,6 +137,13 @@ function RevisarExpediente() {
             </CardContent>
           </Card>
 
+          {n.estado_kyb === "aprobado" && (
+            <PanelUbicacion
+              businessId={n.id}
+              guardada={n.lat != null && n.lng != null ? { lat: Number(n.lat), lng: Number(n.lng) } : null}
+            />
+          )}
+
           <Card className="shadow-card">
             <CardHeader>
               <CardTitle className="text-base">Documentos</CardTitle>
@@ -166,6 +182,9 @@ function RevisarExpediente() {
 
         <div className="space-y-6 lg:sticky lg:top-24">
           {n.estado_kyb === "en_revision" && <PanelDeDecision businessId={n.id} />}
+          {n.estado_kyb === "aprobado" && (
+            <PanelRecomendado businessId={n.id} recomendado={n.recomendado} activo={n.activo} />
+          )}
           <Card className="shadow-card">
             <CardHeader>
               <CardTitle className="text-base">Historial de revisiones</CardTitle>
@@ -275,6 +294,158 @@ function PanelDeDecision({ businessId }: { businessId: string }) {
           </Button>
         </div>
       </CardContent>
+    </Card>
+  );
+}
+
+/** HND-053: destacar el negocio en el mapa público. */
+function PanelRecomendado({
+  businessId,
+  recomendado,
+  activo,
+}: {
+  businessId: string;
+  recomendado: boolean;
+  activo: boolean;
+}) {
+  const qc = useQueryClient();
+  const marcarFn = useServerFn(marcarRecomendado);
+  const [guardando, setGuardando] = useState(false);
+
+  async function cambiar(valor: boolean) {
+    setGuardando(true);
+    try {
+      await marcarFn({ data: { businessId, recomendado: valor } });
+      toast.success(
+        valor ? "Negocio recomendado: se destaca en el mapa." : "Ya no aparece como recomendado.",
+      );
+      await Promise.all([
+        qc.invalidateQueries({ queryKey: ["red-negocio", businessId] }),
+        qc.invalidateQueries({ queryKey: ["red-negocios"] }),
+        qc.invalidateQueries({ queryKey: ["negocios-publicos"] }),
+        qc.invalidateQueries({ queryKey: ["negocio-publico", businessId] }),
+      ]);
+    } catch (e) {
+      toast.error(mensaje(e));
+    } finally {
+      setGuardando(false);
+    }
+  }
+
+  return (
+    <Card className="shadow-card">
+      <CardHeader>
+        <CardTitle className="flex items-center gap-2 text-base">
+          <Star className="size-4 text-amber-500" /> Mapa público
+        </CardTitle>
+        <p className="text-sm text-muted-foreground">
+          Los negocios recomendados se destacan con una estrella en el mapa.
+        </p>
+      </CardHeader>
+      <CardContent className="space-y-3">
+        <div className="flex items-center justify-between gap-3">
+          <Label htmlFor="recomendado">Negocio recomendado</Label>
+          <Switch
+            id="recomendado"
+            checked={recomendado}
+            disabled={guardando}
+            onCheckedChange={(v) => void cambiar(v)}
+          />
+        </div>
+        {!activo && (
+          <p className="text-xs text-muted-foreground">
+            Este negocio está inactivo: no aparece en el mapa aunque esté recomendado.
+          </p>
+        )}
+        <Button asChild variant="outline" size="sm" className="w-full">
+          <Link to="/mapa/$id" params={{ id: businessId }} target="_blank">
+            <ExternalLink /> Ver perfil público
+          </Link>
+        </Button>
+      </CardContent>
+    </Card>
+  );
+}
+
+/** HND-115: la red corrige a mano dónde aparece el negocio en el mapa público. */
+function PanelUbicacion({ businessId, guardada }: { businessId: string; guardada: Coordenada | null }) {
+  const qc = useQueryClient();
+  const moverFn = useServerFn(moverPin);
+  const [editando, setEditando] = useState(false);
+  const [nueva, setNueva] = useState<Coordenada | null>(null);
+  const [guardando, setGuardando] = useState(false);
+
+  const propuesta = nueva ? redondearCoordenada(nueva) : null;
+  const error = propuesta ? errorCoordenada(propuesta) : null;
+  const puedeGuardar = !!propuesta && !error && pinCambio(guardada, propuesta) && !guardando;
+
+  function cerrar() {
+    setEditando(false);
+    setNueva(null);
+  }
+
+  async function guardar() {
+    if (!propuesta) return;
+    setGuardando(true);
+    try {
+      await moverFn({ data: { businessId, ...propuesta } });
+      toast.success("Ubicación actualizada en el mapa.");
+      cerrar();
+      await Promise.all([
+        qc.invalidateQueries({ queryKey: ["red-negocio", businessId] }),
+        qc.invalidateQueries({ queryKey: ["red-negocios"] }),
+        qc.invalidateQueries({ queryKey: ["negocios-publicos"] }),
+        qc.invalidateQueries({ queryKey: ["negocio-publico", businessId] }),
+      ]);
+    } catch (e) {
+      toast.error(mensaje(e));
+    } finally {
+      setGuardando(false);
+    }
+  }
+
+  return (
+    <Card className="shadow-card">
+      <CardHeader className="flex-row items-start justify-between gap-3 space-y-0">
+        <div className="space-y-1.5">
+          <CardTitle className="flex items-center gap-2 text-base">
+            <MapPin className="size-4" /> Ubicación en el mapa
+          </CardTitle>
+          <p className="text-sm text-muted-foreground">
+            {guardada
+              ? "Si el pin quedó lejos (por ejemplo, ubicado solo por código postal), muévelo a la puerta del negocio."
+              : "No pudimos ubicar este negocio. Coloca el pin a mano para que salga en el mapa."}
+          </p>
+        </div>
+        {!editando && (
+          <Button size="sm" variant="outline" onClick={() => setEditando(true)}>
+            <MapPin /> {guardada ? "Mover pin" : "Colocar pin"}
+          </Button>
+        )}
+      </CardHeader>
+      {editando && (
+        <CardContent className="space-y-3">
+          <SelectorUbicacion inicial={guardada} onCambio={setNueva} className="h-72" />
+          <p className="text-xs text-muted-foreground" aria-live="polite">
+            {propuesta
+              ? `Nueva ubicación: ${propuesta.lat}, ${propuesta.lng}`
+              : "Arrastra el pin o haz clic en el mapa donde está el negocio."}
+          </p>
+          {error && (
+            <p className="text-xs text-destructive" role="alert">
+              {error}
+            </p>
+          )}
+          <div className="flex justify-end gap-2">
+            <Button variant="outline" disabled={guardando} onClick={cerrar}>
+              Cancelar
+            </Button>
+            <Button disabled={!puedeGuardar} onClick={() => void guardar()}>
+              {guardando ? <Loader2 className="animate-spin" /> : <Check />} Guardar ubicación
+            </Button>
+          </div>
+        </CardContent>
+      )}
     </Card>
   );
 }

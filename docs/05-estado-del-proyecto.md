@@ -19,6 +19,7 @@ bun install
 cp .env.example .env     # pide los valores al dueño del proyecto (nunca se versionan)
 bun run dev              # http://localhost:8080
 bun run test             # Vitest
+set -a; source .env; set +a; bun run test:e2e   # Playwright (solo PAYMENTS_PROVIDER=mock; levanta la app en :8081)
 ```
 
 - **Stack:** TanStack Start (React 19, TS, Vite), Tailwind + shadcn/ui, Bun.
@@ -43,7 +44,7 @@ bun run test             # Vitest
 - Pruebas SQL dentro de transacciones que se revierten.
 - Pruebas E2E en navegador por rol.
 - Advisors de seguridad de Supabase sin hallazgos nuevos.
-- Vitest: 48 pruebas, más las de puntos.
+- Vitest: 73 pruebas (incluye puntos y caja).
 
 **Pey real:**
 
@@ -90,44 +91,25 @@ bun run test             # Vitest
 - [x] Tipos actualizados en `src/integrations/supabase/types.ts`.
 - [x] `src/lib/puntos.ts`: lógica pura para vistas previas y validación (`puntosGanados`, `maximoCanje`, `siguienteNivel`, `erroresRegla`, `fechaVencimiento`, `NIVELES`), con pruebas en `src/test/puntos.test.ts`.
 
+- [x] **`src/lib/cobros.functions.ts`** (rama `fase-4-puntos`):
+  - `crearCobro` acepta `clienteEmail?` y `puntosCanje?`: liga al cliente con `cliente_por_email`, reserva con `aplicar_canje` y cobra en el proveedor **el neto**. Si el canje o el proveedor fallan, cierra con `cerrar_cobro(_estado: "cancelado")` (ya no hay `update` directo a `charges.estado`). Devuelve `monto`, `descuento`, `neto` y `puntosAGanar` (estimado).
+  - `cancelarCobro` usa `cerrar_cobro`; `estadoCaja` llama `vencer_cobros_pendientes(business_id)`; `verificarCobro` cierra como `expirado` tras 15 min sin pago (`cobroParaCerrar` en `codi.ts`).
+  - Nueva `buscarCliente({ email })` (roles de caja): solo busca (no crea), aplica `expirar_puntos_inactivos` y devuelve nombre, nivel, saldo en este negocio y regla activa.
+- [x] **Caja:** sección "Cliente (opcional)" con Buscar, "Usar puntos" con botón Máximo, resumen total / descuento / a cobrar con los puntos que ganará; `CobroEnCurso` muestra el neto y los puntos (al pagarse, los lee del ledger); `CobrosDeHoy` suma lo cobrado neto.
+- [x] **HND-040:** tarjeta "Programa de puntos" en `/negocio` (`src/components/programa-puntos.tsx`, solo gerencia), escribe `point_rules` con el cliente del navegador y valida con `erroresRegla`.
+- [x] **HND-044 / 045:** `/monedero` con `miMonedero()` (`src/lib/monedero.functions.ts`, rol `cliente`, admin client filtrado por su `customer_id`; solo expone `nombre_comercial` del negocio): nivel y compras para el siguiente, saldo por negocio con fecha de vencimiento e historial (últimos 50).
+- [x] Helpers puros con pruebas (`src/test/puntos-caja.test.ts`): `resumenCobro`, `errorCanje`, `cobradoNeto`, `saldosDelMonedero`, `cobroParaCerrar`. Vitest: 73 pruebas. `tsc --noEmit` y `vite build` sin errores.
+- [x] ✅ HND-040 a 045 marcados en el backlog.
+
 ### ⏳ Falta en Fase 4
 
-1. **`src/lib/cobros.functions.ts`:**
-   - `crearCobro`:
-     - aceptar `clienteEmail?` y `puntosCanje?`;
-     - ligar el cliente con `rpc("cliente_por_email")`;
-     - si hay canje, llamar `rpc("aplicar_canje")` y cobrar en Pey **el monto neto**;
-     - si Pey falla, cerrar con `rpc("cerrar_cobro", {_estado: "cancelado"})` para devolver los puntos, en lugar del `update` directo actual.
-   - `cancelarCobro`: usar `cerrar_cobro`.
-   - `estadoCaja`: llamar `vencer_cobros_pendientes(business_id)`.
-   - `verificarCobro`: si el cobro no está pagado y ya pasaron más de 15 min, cerrarlo como `expirado`.
-2. **Nueva función de servidor `buscarCliente({ email })`** (roles de caja):
-   - solo busca, no crea;
-   - aplica `expirar_puntos_inactivos`;
-   - devuelve nombre, nivel, saldo en este negocio y la regla activa.
-3. **Caja (`src/routes/_authenticated/caja.tsx`):**
-   - sección opcional "Cliente" con correo, botón Buscar, saldo y nivel;
-   - campo "Usar puntos" con botón de máximo;
-   - resumen: total, descuento y a cobrar;
-   - `CobroEnCurso` debe mostrar el neto y los puntos que ganará;
-   - `CobrosDeHoy` debe sumar lo cobrado neto (monto − descuento), como ya lo hace `ventas-del-dia.tsx`.
-4. **HND-040 en `/negocio`:** tarjeta "Programa de puntos" (solo gerencia) con:
-   - porcentaje;
-   - tope por compra;
-   - días de vigencia por inactividad;
-   - canje máximo;
-   - activar o desactivar.
-
-   Se escribe con el cliente del navegador sobre `point_rules`, que RLS ya permite a owner y admin. Valida con `erroresRegla`.
-5. **HND-044, monedero (`src/routes/_authenticated/monedero.tsx`):**
-   - función de servidor `miMonedero()` (rol `cliente`), con admin client filtrado por el `customer_id` de quien llama, porque el cliente no puede leer `businesses` por RLS;
-   - pantalla: saldo por negocio, fecha en que vence, historial de movimientos, nivel y cuántas compras faltan para el siguiente.
-6. **Verificación:** prueba E2E en navegador en modo `mock`:
+1. **Verificación E2E en navegador en modo `mock`** (no se pudo hacer sin credenciales de Supabase):
    - regla → cobro con cliente → pago simulado → puntos;
    - cobro con canje → cancelar → devolución;
    - monedero del cliente.
-
-   Al terminar, marcar ✅ HND-040 a 045 en el backlog.
+2. **Decisiones abiertas** detectadas al revisar:
+   - `buscarCliente` deja que cualquier cajero confirme si un correo existe en la red y vea su nombre y nivel. Si preocupa la privacidad, devolver solo el saldo en este negocio.
+   - En modo `mock` la caja no llama `verificarCobro`, así que un cobro abandonado solo se vence al volver a abrir la caja (`estadoCaja`) o con el job de HND-116.
 
 ---
 
@@ -148,6 +130,33 @@ No toca los archivos de la Fase 4.
 
 - `lat` y `lng` se llenan al aprobar el KYB (`src/lib/geocoding.server.ts`, Nominatim).
 - Si las coordenadas fallan, se usa el código postal.
+
+#### Estado Fase 5 (rama `fase-5-mapa`, sin aplicar en la base)
+
+Código listo de HND-050 a 053; **ningún ticket con ✅** hasta aplicar la migración y probar en navegador.
+
+- **Migración** `supabase/migrations/20261108030000_mapa_publico.sql` (**NO aplicada**): función `negocios_publicos()` *security definer*, ejecutable por `anon` y `authenticated`. Lista blanca: `id`, `nombre_comercial`, `categoria`, `direccion`, `lat`, `lng`, `horario`, `recomendado` y `puntos_porcentaje` (regla de puntos activa), solo de negocios `aprobado` + `activo`. Nunca RFC, CURP, razón social, teléfono, CP, `org_id` ni datos bancarios. Se eligió función y no vista porque una vista con permisos del dueño es un error del advisor de Supabase.
+- **Prueba SQL:** `supabase/tests/mapa_publico.sql` (termina en `raise exception 'OK'`, se revierte). Cubre columnas expuestas, filtro aprobado/activo, que anon no lea `businesses`, que el dueño no se pueda recomendar, que la red sí y que un borrador no pueda ser recomendado.
+- **Tipos:** `negocios_publicos` agregado a mano en `src/integrations/supabase/types.ts`; **regenerarlos** después de aplicar.
+- **Rutas públicas:** `/mapa` (mapa + lista, filtros `?categoria=` y `?recomendados=true` en la URL) y `/mapa/$id` (perfil: categoría, dirección, cómo llegar, horario, promoción de puntos). Declaradas en `RUTAS_PUBLICAS` de `src/lib/roles.ts`; un test falla si una ruta fuera de `_authenticated` y `/api` no está declarada.
+- **MapLibre** se carga con `import()` dentro de un efecto (`src/components/mapa-negocios.tsx`): nunca corre en SSR. Teselas raster de `tile.openstreetmap.org` con atribución.
+- **HND-053:** server function `marcarRecomendado` (`src/lib/mapa.functions.ts`, `exigirRol(["admin_red"])` + RLS + trigger `guard_business_write`), con switch en `/red/$id` y estrella en `/red`. Recomendados: pin dorado con ★, primero en la lista y filtro "Recomendados".
+- **Lógica pura** en `src/lib/mapa.ts` con pruebas en `src/test/mapa.test.ts`.
+
+**Para cerrar la fase:**
+
+1. Avisar y aplicar la migración.
+2. Correr `supabase/tests/mapa_publico.sql`: debe responder `ERROR: OK`.
+3. Regenerar tipos y correr advisors. Es esperable un aviso por función *security definer* ejecutable por `anon`: es intencional.
+4. E2E: aprobar un negocio en `/red`, verlo en `/mapa` sin sesión, filtrar, abrir el perfil desde el pin, recomendarlo y ver la estrella.
+5. Marcar ✅ HND-050 a 053.
+
+**Decisiones abiertas:**
+
+- **Teléfono:** no se publica porque puede ser el celular personal del dueño. Si se quiere mostrar, que sea un campo aparte y opcional, como "teléfono público".
+- **`horario`:** no hay pantalla para capturarlo (la UI acepta texto o `{ "lun-sab": "8:00-21:00" }`).
+- **Dirección:** se publica la `direccion` del expediente, que es la del comprobante de domicilio **del negocio**. Hay que confirmar que nunca sea un domicilio particular.
+- **Teselas en producción:** con tráfico real hay que mover las teselas a un proveedor, porque la política de OSM limita el uso intensivo.
 
 ### Fase 6 · Lanzamiento
 

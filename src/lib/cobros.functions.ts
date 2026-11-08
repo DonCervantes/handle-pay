@@ -4,7 +4,14 @@ import { z } from "zod";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 import { exigirRol } from "./autorizacion";
 import { ROLES_CAJA, ROLES_GERENCIA } from "./roles";
-import { MONTO_MAXIMO, VIGENCIA_COBRO_SEG, conceptoCobro, validarClabe } from "./codi";
+import {
+  MONTO_MAXIMO,
+  VIGENCIA_COBRO_SEG,
+  cobroParaCerrar,
+  conceptoCobro,
+  validarClabe,
+} from "./codi";
+import { puntosGanados, type Nivel, type ReglaPuntos } from "./puntos";
 import { modoSimulador, obtenerProveedor } from "./pagos/index.server";
 import { estadoCuenta } from "./pagos/proveedor";
 import { firmarWebhook } from "./standard-webhooks";
@@ -28,6 +35,36 @@ async function miNegocio(supabase: any) {
   } | null;
 }
 
+type Admin = Awaited<ReturnType<typeof admin>>;
+
+/** Regla de puntos activa del negocio, o null si no tiene programa activo. */
+async function reglaActiva(db: Admin, businessId: string): Promise<ReglaPuntos | null> {
+  const { data } = await db
+    .from("point_rules")
+    .select("porcentaje, tope_puntos, vigencia_dias, canje_max_porcentaje, activo")
+    .eq("business_id", businessId)
+    .eq("activo", true)
+    .maybeSingle();
+  if (!data) return null;
+  return {
+    porcentaje: Number(data.porcentaje),
+    tope_puntos: data.tope_puntos == null ? null : Number(data.tope_puntos),
+    vigencia_dias: data.vigencia_dias,
+    canje_max_porcentaje: Number(data.canje_max_porcentaje),
+    activo: data.activo,
+  };
+}
+
+/**
+ * Cierra un cobro no pagado (cancelado o expirado) y devuelve los puntos que tenía
+ * reservados. Atómico e idempotente en la base. Devuelve el estado final del cobro.
+ */
+async function cerrarCobro(db: Admin, cobroId: string, estado: "cancelado" | "expirado") {
+  const { data, error } = await db.rpc("cerrar_cobro", { _charge_id: cobroId, _estado: estado });
+  if (error) throw new Error(error.message);
+  return data;
+}
+
 /**
  * ¿Puede cobrar esta caja? Lo usa la pantalla de Caja. El cajero no puede leer la
  * cuenta de cobro (RLS la reserva a la gerencia), así que el servidor responde por él.
@@ -47,6 +84,11 @@ export const estadoCaja = createServerFn({ method: "GET" })
       };
     }
     const db = await admin();
+    // Cierra los cobros abandonados del negocio y devuelve sus puntos (HND-043).
+    const { error: errorVencer } = await db.rpc("vencer_cobros_pendientes", {
+      _business_id: negocio.id,
+    });
+    if (errorVencer) console.error("vencer_cobros_pendientes", errorVencer);
     const { data: cuenta } = await db
       .from("pey_accounts")
       .select("estado")
@@ -167,10 +209,25 @@ export const crearCobro = createServerFn({ method: "POST" })
           .optional(),
         detalle: z.string().trim().max(60).optional(),
         idempotencyKey: z.string().uuid(),
+        // HND-042 / HND-043: cliente identificado y puntos que usa como descuento.
+        clienteEmail: z.string().trim().toLowerCase().email().max(255).optional(),
+        puntosCanje: z
+          .number()
+          .positive()
+          .refine((p) => Math.round(p * 100) === p * 100, "Los puntos admiten máximo 2 decimales.")
+          .optional(),
       })
       .refine(
         (d) => d.tipo === "qr" || !!d.telefono,
         "Para cobrar por push escribe el celular del cliente.",
+      )
+      .refine(
+        (d) => !d.puntosCanje || !!d.clienteEmail,
+        "Para usar puntos identifica primero al cliente.",
+      )
+      .refine(
+        (d) => !d.puntosCanje || d.puntosCanje < d.monto,
+        "Los puntos no pueden cubrir toda la compra.",
       )
       .parse(d),
   )
@@ -195,13 +252,30 @@ export const crearCobro = createServerFn({ method: "POST" })
       throw new Error("La cuenta de cobro del negocio aún no está activa.");
     }
 
-    // Con la sesión de quien cobra: RLS exige su org, su rol y estado "pendiente".
+    // HND-042: liga el cliente por correo (lo crea si aún no existe, sin cuenta).
+    let cliente: { id: string; nivel: Nivel } | null = null;
+    if (data.clienteEmail) {
+      const { data: id, error: errorCliente } = await db.rpc("cliente_por_email", {
+        _email: data.clienteEmail,
+      });
+      if (errorCliente || !id) {
+        console.error("cliente_por_email", errorCliente);
+        throw new Error("No pudimos identificar al cliente. Revisa su correo.");
+      }
+      const { data: ficha } = await db.from("customers").select("nivel").eq("id", id).single();
+      cliente = { id, nivel: (ficha?.nivel ?? "nuevo") as Nivel };
+    }
+
+    // Con la sesión de quien cobra: RLS exige su org, su rol, estado "pendiente" y sin canje.
+    // El cliente lo liga después el servidor (RLS solo deja a la caja poner clientes que ya
+    // son de su negocio, y este puede ser su primera compra).
     const { data: cobro, error } = await context.supabase
       .from("charges")
       .insert({
         business_id: negocio.id,
         org_id: perfil.org_id!,
         cajero_id: context.userId,
+        customer_id: null,
         monto: data.monto,
         tipo: data.tipo,
         idempotency_key: data.idempotencyKey,
@@ -215,9 +289,44 @@ export const crearCobro = createServerFn({ method: "POST" })
       throw new Error("No pudimos crear el cobro. Intenta de nuevo.");
     }
 
+    if (cliente) {
+      const { error: errorAsignar } = await db.rpc("asignar_cliente_cobro", {
+        _charge_id: cobro.id,
+        _customer_id: cliente.id,
+      });
+      if (errorAsignar) {
+        console.error("asignar_cliente_cobro", errorAsignar);
+        await cerrarCobro(db, cobro.id, "cancelado").catch((e) =>
+          console.error("cerrar_cobro tras asignar cliente", e),
+        );
+        throw new Error("No pudimos ligar al cliente con el cobro. Intenta de nuevo.");
+      }
+    }
+
+    // HND-043: reserva los puntos y obtiene lo que se cobra por CoDi (monto − descuento).
+    let neto = data.monto;
+    if (data.puntosCanje) {
+      const { data: aCobrar, error: errorCanje } = await db.rpc("aplicar_canje", {
+        _charge_id: cobro.id,
+        _puntos: data.puntosCanje,
+      });
+      if (errorCanje || aCobrar == null) {
+        await cerrarCobro(db, cobro.id, "cancelado").catch((e) =>
+          console.error("cerrar_cobro tras canje fallido", e),
+        );
+        // Los mensajes de aplicar_canje (saldo insuficiente, máximo por compra) son para el cajero.
+        throw new Error(errorCanje?.message ?? "No pudimos aplicar los puntos.");
+      }
+      neto = Number(aCobrar);
+    }
+    const descuento = Math.round((data.monto - neto) * 100) / 100;
+    const puntosAGanar = cliente
+      ? puntosGanados(neto, await reglaActiva(db, negocio.id), cliente.nivel)
+      : 0;
+
     const datos = {
       cuentaId: cuenta.pey_bank_account_id,
-      monto: data.monto,
+      monto: neto,
       concepto: conceptoCobro(negocio.nombre_comercial, data.detalle),
       vigenciaSeg: VIGENCIA_COBRO_SEG,
       cobroId: cobro.id,
@@ -235,12 +344,71 @@ export const crearCobro = createServerFn({ method: "POST" })
           .referencia;
       }
       await db.from("charges").update({ pey_charge_id: referencia }).eq("id", cobro.id);
-      return { cobroId: cobro.id, creadoEn: cobro.created_at, qr };
+      return {
+        cobroId: cobro.id,
+        creadoEn: cobro.created_at,
+        qr,
+        monto: data.monto,
+        descuento,
+        neto,
+        puntosAGanar,
+      };
     } catch (e) {
-      // Sin cobro en el proveedor, el registro local no debe quedar pendiente.
-      await db.from("charges").update({ estado: "cancelado" }).eq("id", cobro.id);
+      // Sin cobro en el proveedor, el registro local no debe quedar pendiente:
+      // se cierra con la función atómica, que además devuelve los puntos reservados.
+      await cerrarCobro(db, cobro.id, "cancelado").catch((err) =>
+        console.error("cerrar_cobro tras fallo del proveedor", err),
+      );
       throw e;
     }
+  });
+
+/**
+ * HND-042: busca al cliente por correo para la caja. Solo busca, no crea (la ficha
+ * se crea al cobrar). Aplica el vencimiento por inactividad antes de dar el saldo.
+ */
+export const buscarCliente = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((d) =>
+    z.object({ email: z.string().trim().toLowerCase().email().max(255) }).parse(d),
+  )
+  .handler(async ({ data, context }) => {
+    await exigirRol(context.supabase, context.userId, ROLES_CAJA, "No tienes permiso para cobrar.");
+    const negocio = await miNegocio(context.supabase);
+    if (!negocio) throw new Error("Tu cuenta no tiene un negocio registrado.");
+    const db = await admin();
+    const regla = await reglaActiva(db, negocio.id);
+
+    // ilike sin comodines: el correo se compara completo, sin importar mayúsculas.
+    const patron = data.email.replace(/[\\%_]/g, (c) => `\\${c}`);
+    const { data: cliente } = await db
+      .from("customers")
+      .select("id, nombre, nivel")
+      .ilike("email", patron)
+      .maybeSingle();
+    if (!cliente) return { encontrado: false as const, regla };
+
+    const { error: errorExpirar } = await db.rpc("expirar_puntos_inactivos", {
+      _customer_id: cliente.id,
+      _business_id: negocio.id,
+    });
+    if (errorExpirar) console.error("expirar_puntos_inactivos", errorExpirar);
+    const { data: saldo } = await db
+      .from("customer_point_balances")
+      .select("saldo")
+      .eq("customer_id", cliente.id)
+      .eq("business_id", negocio.id)
+      .maybeSingle();
+
+    return {
+      encontrado: true as const,
+      regla,
+      cliente: {
+        nombre: cliente.nombre,
+        nivel: cliente.nivel as Nivel,
+        saldo: Number(saldo?.saldo ?? 0),
+      },
+    };
   });
 
 /**
@@ -255,19 +423,27 @@ export const verificarCobro = createServerFn({ method: "POST" })
     await exigirRol(context.supabase, context.userId, ROLES_CAJA);
     const { data: cobro } = await context.supabase
       .from("charges")
-      .select("id, tipo, estado, pey_charge_id")
+      .select("id, tipo, estado, pey_charge_id, created_at")
       .eq("id", data.cobroId)
       .maybeSingle();
     if (!cobro) throw new Error("Cobro no encontrado.");
-    if (cobro.estado !== "pendiente" || !cobro.pey_charge_id) return { estado: cobro.estado };
-
-    const pago = await obtenerProveedor().consultarPago({
-      tipo: cobro.tipo,
-      referencia: cobro.pey_charge_id,
-    });
-    if (!pago.pagado) return { estado: "pendiente" as const };
+    if (cobro.estado !== "pendiente") return { estado: cobro.estado };
 
     const db = await admin();
+    const pago = cobro.pey_charge_id
+      ? await obtenerProveedor().consultarPago({
+          tipo: cobro.tipo,
+          referencia: cobro.pey_charge_id,
+        })
+      : null;
+    if (!pago?.pagado) {
+      // Pasados 15 min sin pago, se cierra como expirado y se devuelven sus puntos.
+      if (cobroParaCerrar(cobro.created_at)) {
+        return { estado: await cerrarCobro(db, cobro.id, "expirado") };
+      }
+      return { estado: "pendiente" as const };
+    }
+
     const { error } = await db.rpc("registrar_pago_pey", {
       _charge_id: cobro.id,
       _monto: pago.monto,
@@ -284,14 +460,17 @@ export const cancelarCobro = createServerFn({ method: "POST" })
   .handler(async ({ data, context }) => {
     const perfil = await exigirRol(context.supabase, context.userId, ROLES_CAJA);
     const db = await admin();
-    const { data: filas } = await db
+    const { data: cobro } = await db
       .from("charges")
-      .update({ estado: "cancelado" })
+      .select("id, estado")
       .eq("id", data.cobroId)
       .eq("org_id", perfil.org_id!)
-      .eq("estado", "pendiente")
-      .select("id");
-    if (!filas?.length) throw new Error("Ese cobro ya no está pendiente.");
+      .maybeSingle();
+    if (!cobro || cobro.estado !== "pendiente") throw new Error("Ese cobro ya no está pendiente.");
+    // Atómico: cancela y devuelve los puntos reservados. Si el pago llegó justo antes,
+    // la función respeta el estado "pagado".
+    const estado = await cerrarCobro(db, cobro.id, "cancelado");
+    if (estado !== "cancelado") throw new Error("Ese cobro ya no está pendiente.");
     return { ok: true as const };
   });
 

@@ -109,27 +109,29 @@ Ventas del día, # de cobros, ticket promedio, desglose por cajero.
 
 ## FASE 4 — Lealtad / puntos
 
-### HND-040 · Reglas de puntos por negocio `puntos`
+> Implementado y probado con SQL + Vitest. Falta la prueba E2E en navegador en modo `mock` (ver `05-estado-del-proyecto.md` §3).
+
+### ✅ HND-040 · Reglas de puntos por negocio `puntos`
 CRUD de `point_rules` (porcentaje, tope, vigencia).
 **Aceptación:** el dueño define cómo se otorgan puntos.
 
-### HND-041 · Acumular puntos al confirmarse el cobro `puntos`
+### ✅ HND-041 · Acumular puntos al confirmarse el cobro `puntos`
 Al marcar `charge=pagado` con `customer_id`, insertar `point_transaction` de acumulación.
 **Aceptación:** el saldo del cliente sube según la regla.
 
-### HND-042 · Identificar cliente en caja (por email) `puntos` `ui`
+### ✅ HND-042 · Identificar cliente en caja (por email) `puntos` `ui`
 En el cobro, buscar/crear `customer` por email para ligarle los puntos.
 **Aceptación:** se puede cobrar con o sin cliente identificado.
 
-### HND-043 · Canje de puntos como descuento `puntos` `ui`
+### ✅ HND-043 · Canje de puntos como descuento `puntos` `ui`
 Aplicar puntos como descuento en un cobro; registrar `point_transaction` de canje.
 **Aceptación:** el descuento baja el monto y el saldo de puntos.
 
-### HND-044 · Monedero del cliente (panel cliente) `puntos` `ui`
+### ✅ HND-044 · Monedero del cliente (panel cliente) `puntos` `ui`
 Saldo de puntos, historial de movimientos, por negocio.
 **Aceptación:** el cliente ve su saldo calculado del ledger.
 
-### HND-045 · Niveles de cliente (nuevo/confianza/vip) `puntos`
+### ✅ HND-045 · Niveles de cliente (nuevo/confianza/vip) `puntos`
 Reglas que suben el nivel según historial; afectan beneficios.
 **Aceptación:** el nivel cambia automáticamente al cumplir criterios.
 
@@ -137,19 +139,21 @@ Reglas que suben el nivel según historial; afectan beneficios.
 
 ## FASE 5 — Mapa y descubrimiento
 
-### HND-050 · Mapa público con MapLibre + tiles OSM `mapa` `ui`
+> Estado (2026-11-07): ✅ HND-050 a 053. Migración `20261108030000_mapa_publico.sql` aplicada y su prueba con `ERROR: OK`; `bun run test:e2e` 8/8 contra la base real, incluidas las 3 pruebas del mapa con negocios.
+
+### ✅ HND-050 · Mapa público con MapLibre + tiles OSM `mapa` `ui`
 Render del mapa con pines de negocios `aprobado + activo`.
 **Aceptación:** se ven los pines con coordenadas reales.
 
-### HND-051 · Filtro por categoría `mapa` `ui`
+### ✅ HND-051 · Filtro por categoría `mapa` `ui`
 Filtrar pines por abarrotes/carnicería/taquería/etc.
 **Aceptación:** el filtro actualiza los pines mostrados.
 
-### HND-052 · Perfil público del negocio `mapa` `ui`
+### ✅ HND-052 · Perfil público del negocio `mapa` `ui`
 Página de perfil: nombre, categoría, horario, promos, ubicación.
 **Aceptación:** accesible desde el pin del mapa.
 
-### HND-053 · Marcar "negocio recomendado" (admin) `mapa` `kyb`
+### ✅ HND-053 · Marcar "negocio recomendado" (admin) `mapa` `kyb`
 Admin marca negocios como recomendados; se destacan en el mapa.
 **Aceptación:** los recomendados se distinguen visualmente.
 
@@ -157,7 +161,7 @@ Admin marca negocios como recomendados; se destacan en el mapa.
 
 ## FASE 6 — Landing y lanzamiento
 
-### HND-060 · Landing principal `ui`
+### ✅ HND-060 · Landing principal `ui`
 Implementar la landing con el copy de `03-landing.md` (hero, beneficios, cómo funciona, FAQ, footer). Mobile-first.
 Incluye reemplazar el logo: hoy apunta al almacén de assets de Lovable (`/__l5e/assets-v1/...`) y sale roto en local; debe vivir en `public/`.
 **Aceptación:** landing responsive con CTAs funcionales.
@@ -165,10 +169,12 @@ Incluye reemplazar el logo: hoy apunta al almacén de assets de Lovable (`/__l5e
 ### HND-061 · Aviso de privacidad y términos `infra`
 Aviso de privacidad (LFPDPPP) y términos (incluye que los puntos no son efectivo).
 **Aceptación:** enlaces legales activos y aceptación registrada.
+**Estado (T4, agente-4):** rutas `/privacidad` y `/terminos`, enlaces en el pie y en `/auth`, casilla obligatoria al registrarse. La aceptación se guarda en `legal_acceptances` con la migración `20261108040401_aceptacion_legal.sql` (aplicada el 2026-11-07, prueba `ERROR: OK`). Falta: datos del responsable (domicilio y correo) y revisión legal; luego `BORRADOR_LEGAL = false` en `src/lib/legal.ts`.
 
-### HND-005 · Preset de despliegue Cloudflare `setup` `infra`
+### ✅ HND-005 · Preset de despliegue Cloudflare `setup` `infra`
 Configurar preset Cloudflare Workers en TanStack Start/Nitro; pipeline de build. Incluye verificar que ningún secreto (service role, llaves de Pey) quede en el bundle y probar el artefacto en el runtime de Workers.
 **Aceptación:** build de producción genera artefacto compatible con Cloudflare (aún sin deploy público).
+**Hecho (2026-11-07):** preset `cloudflare-module` fijo en `vite.config.ts`, `wrangler.jsonc` (Worker `handle-pay`), MapLibre fuera del bundle de servidor (Worker 0.75 MiB gzip, antes 1.05) y `bun run verificar:bundle` (secretos, MapLibre, tamaño). Probado con `wrangler dev` (workerd): `/`, `/mapa`, `/auth` 200 y el mapa carga en Chromium headless.
 
 ### HND-062 · Deploy a Cloudflare (producción) `infra`
 Desplegar a Cloudflare Workers con variables de producción y Pey real.
@@ -203,6 +209,7 @@ Pendiente antes de producción:
 - **HND-112** Asistente IA del negocio (del repo base: categorización y consultas en lenguaje natural).
 - **HND-113** Baja de cuenta y anonimización (LFPDPPP): la bitácora KYB es inmutable y bloquea borrar un negocio revisado o a su revisor. Definir cómo cumplir el derecho de cancelación (anonimizar datos personales conservando la auditoría).
 - **HND-114** Rechazo por documento: que la red marque qué documento específico debe corregirse (hoy el rechazo es del expediente completo y el motivo va en la nota).
-- **HND-115** Ajuste manual del pin: cuando Nominatim no encuentra la dirección (o solo ubica el código postal), que la red pueda mover el pin en el mapa.
-- **HND-116** Vencer cobros en la base: hoy un cobro pendiente se muestra "Vencido" en pantalla a los 10 min, pero en la base sigue "pendiente". Un job (pg_cron) que lo marque `expirado`.
+- **HND-115** Ajuste manual del pin: cuando Nominatim no encuentra la dirección (o solo ubica el código postal), que la red pueda mover el pin en el mapa. ✅ Hecho para `admin_red` en `/red/$id` ("Mover pin", server function `moverPin`, T8). El dueño no puede (lo bloquea `guard_business_write`); habilitarlo es decisión pendiente.
+- **HND-116** ✅ Vencer cobros en la base: hoy un cobro pendiente se muestra "Vencido" en pantalla a los 10 min, pero en la base sigue "pendiente". Un job (pg_cron) que lo marque `expirado`. Hecho: job pg_cron `vencer-cobros-pendientes` cada 5 min (migración `20261108040301`, aplicada).
+  _Migración lista sin aplicar: `20261108040301_job_vencer_cobros.sql` (prueba `supabase/tests/job_vencer_cobros.sql`)._
 - **HND-117** Comisiones de Pey: registrar la comisión de cada cobro (`amountBreakdown.fee`) como egreso para que el saldo en Handle coincida con lo que llega al banco.

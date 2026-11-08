@@ -20,12 +20,18 @@ export const NIVELES: Record<
     compras: 5,
     beneficio: "25% más puntos en cada compra",
   },
-  vip: { nombre: "VIP", multiplicador: 1.5, compras: 20, beneficio: "50% más puntos en cada compra" },
+  vip: {
+    nombre: "VIP",
+    multiplicador: 1.5,
+    compras: 20,
+    beneficio: "50% más puntos en cada compra",
+  },
 };
 
 /** Siguiente nivel y cuántas compras faltan para llegar (null si ya es VIP). */
 export function siguienteNivel(nivel: Nivel, comprasPagadas: number) {
-  const siguiente: Nivel | null = nivel === "nuevo" ? "confianza" : nivel === "confianza" ? "vip" : null;
+  const siguiente: Nivel | null =
+    nivel === "nuevo" ? "confianza" : nivel === "confianza" ? "vip" : null;
   if (!siguiente) return null;
   return { nivel: siguiente, faltan: Math.max(0, NIVELES[siguiente].compras - comprasPagadas) };
 }
@@ -64,11 +70,16 @@ export function erroresRegla(r: {
   const e: Partial<Record<keyof typeof r, string>> = {};
   if (r.porcentaje == null || !(r.porcentaje > 0) || r.porcentaje > 100)
     e.porcentaje = "Escribe un porcentaje entre 0.01 y 100.";
-  else if (r.porcentaje > 20) e.porcentaje = "Más de 20% es demasiado para un changarro; usa 20 o menos.";
+  else if (r.porcentaje > 20)
+    e.porcentaje = "Más de 20% es demasiado para un changarro; usa 20 o menos.";
   if (r.tope_puntos != null && !(r.tope_puntos > 0)) e.tope_puntos = "El tope debe ser mayor a 0.";
   if (r.vigencia_dias != null && (!Number.isInteger(r.vigencia_dias) || r.vigencia_dias < 1))
     e.vigencia_dias = "Escribe días completos (1 o más).";
-  if (r.canje_max_porcentaje == null || !(r.canje_max_porcentaje > 0) || r.canje_max_porcentaje > 90)
+  if (
+    r.canje_max_porcentaje == null ||
+    !(r.canje_max_porcentaje > 0) ||
+    r.canje_max_porcentaje > 90
+  )
     e.canje_max_porcentaje = "Escribe un porcentaje entre 1 y 90.";
   return e;
 }
@@ -95,3 +106,72 @@ export function formatPuntos(n: number) {
 
 const CORREO = /^[^@\s]+@[^@\s]+\.[^@\s]+$/;
 export const correoValido = (c: string) => CORREO.test(c.trim());
+
+/** Total, descuento por puntos y lo que se cobra por CoDi. */
+export function resumenCobro(monto: number, puntosCanje: number) {
+  const descuento = puntosCanje > 0 ? centavos(Math.min(puntosCanje, monto)) : 0;
+  return { total: centavos(monto), descuento, aCobrar: centavos(monto - descuento) };
+}
+
+/**
+ * Error del campo "Usar puntos" o null si está bien. `maximo` viene de maximoCanje.
+ * maximoCanje ya deja algo por cobrar por CoDi (la base exige descuento < monto).
+ */
+export function errorCanje(puntos: number | null, maximo: number): string | null {
+  if (puntos == null || puntos === 0) return null;
+  if (!(puntos > 0) || Math.round(puntos * 100) !== puntos * 100)
+    return "Escribe los puntos con máximo 2 decimales.";
+  if (puntos > maximo) return `En esta compra puede usar máximo ${formatPuntos(maximo)} puntos.`;
+  return null;
+}
+
+/** Lo cobrado de verdad en una lista de cobros: solo pagados, monto − descuento. */
+export function cobradoNeto(
+  cobros: readonly { estado: string; monto: number | string; descuento_puntos: number | string }[],
+) {
+  return centavos(
+    cobros
+      .filter((c) => c.estado === "pagado")
+      .reduce((s, c) => s + Number(c.monto) - Number(c.descuento_puntos), 0),
+  );
+}
+
+export type SaldoNegocio = {
+  businessId: string;
+  negocio: string;
+  saldo: number;
+  ultimoMovimiento: string | null;
+  vigenciaDias: number | null;
+  venceEl: string | null;
+};
+
+/**
+ * Arma los saldos del monedero: uno por negocio con saldo positivo, con la fecha en
+ * que vence por inactividad. Ordenados de mayor a menor saldo.
+ */
+export function saldosDelMonedero(
+  saldos: readonly {
+    business_id: string | null;
+    saldo: number | string | null;
+    ultimo_movimiento: string | null;
+  }[],
+  negocios: ReadonlyMap<string, string>,
+  vigencias: ReadonlyMap<string, number | null>,
+): SaldoNegocio[] {
+  return saldos
+    .filter((s) => !!s.business_id && Number(s.saldo) > 0)
+    .map((s) => {
+      const businessId = s.business_id!;
+      const vigenciaDias = vigencias.get(businessId) ?? null;
+      const vence = fechaVencimiento(s.ultimo_movimiento, vigenciaDias);
+      return {
+        businessId,
+        negocio: negocios.get(businessId) ?? "Negocio de la red",
+        saldo: Number(s.saldo),
+        ultimoMovimiento: s.ultimo_movimiento,
+        vigenciaDias,
+        venceEl: vence ? vence.toISOString() : null,
+      };
+    })
+    .sort((a, b) => b.saldo - a.saldo);
+}

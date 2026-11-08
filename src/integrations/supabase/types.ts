@@ -561,6 +561,30 @@ export type Database = {
           },
         ]
       }
+      legal_acceptances: {
+        Row: {
+          accepted_at: string
+          id: string
+          privacidad_version: string
+          terminos_version: string
+          user_id: string
+        }
+        Insert: {
+          accepted_at?: string
+          id?: string
+          privacidad_version: string
+          terminos_version: string
+          user_id: string
+        }
+        Update: {
+          accepted_at?: string
+          id?: string
+          privacidad_version?: string
+          terminos_version?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       organizations: {
         Row: {
           country: string
@@ -1079,12 +1103,20 @@ export type Database = {
         Args: { _charge_id: string; _puntos: number }
         Returns: number
       }
+      asignar_cliente_cobro: {
+        Args: { _charge_id: string; _customer_id: string }
+        Returns: undefined
+      }
       cerrar_cobro: {
         Args: {
           _charge_id: string
           _estado: Database["public"]["Enums"]["estado_cobro"]
         }
         Returns: Database["public"]["Enums"]["estado_cobro"]
+      }
+      cliente_ligado_a_mi_org: {
+        Args: { _customer_id: string }
+        Returns: boolean
       }
       cliente_por_email: { Args: { _email: string }; Returns: string }
       current_org_id: { Args: never; Returns: string }
@@ -1099,6 +1131,20 @@ export type Database = {
         Returns: number
       }
       my_customer_id: { Args: never; Returns: string }
+      negocios_publicos: {
+        Args: never
+        Returns: {
+          categoria: Database["public"]["Enums"]["categoria_negocio"]
+          direccion: string
+          horario: Json
+          id: string
+          lat: number
+          lng: number
+          nombre_comercial: string
+          puntos_porcentaje: number
+          recomendado: boolean
+        }[]
+      }
       nivel_por_compras: {
         Args: { _compras: number }
         Returns: Database["public"]["Enums"]["nivel_cliente"]

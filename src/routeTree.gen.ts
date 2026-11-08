@@ -12,6 +12,8 @@ import { Route as rootRouteImport } from './routes/__root'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as AuthenticatedRouteRouteImport } from './routes/_authenticated/route'
 import { Route as AuthRouteImport } from './routes/auth'
+import { Route as PrivacidadRouteImport } from './routes/privacidad'
+import { Route as TerminosRouteImport } from './routes/terminos'
 import { Route as AuthenticatedApiRouteImport } from './routes/_authenticated/api'
 import { Route as AuthenticatedCajaRouteImport } from './routes/_authenticated/caja'
 import { Route as AuthenticatedColaboradoresRouteImport } from './routes/_authenticated/colaboradores'
@@ -21,6 +23,8 @@ import { Route as AuthenticatedFinanzasRouteImport } from './routes/_authenticat
 import { Route as AuthenticatedMonederoRouteImport } from './routes/_authenticated/monedero'
 import { Route as AuthenticatedNegocioRouteImport } from './routes/_authenticated/negocio'
 import { Route as AuthenticatedPagosRouteImport } from './routes/_authenticated/pagos'
+import { Route as MapaIndexRouteImport } from './routes/mapa.index'
+import { Route as MapaIdRouteImport } from './routes/mapa.$id'
 import { Route as AuthenticatedClientesIndexRouteImport } from './routes/_authenticated/clientes.index'
 import { Route as AuthenticatedClientesIdRouteImport } from './routes/_authenticated/clientes.$id'
 import { Route as AuthenticatedRedIndexRouteImport } from './routes/_authenticated/red.index'
@@ -42,6 +46,16 @@ const AuthenticatedRouteRoute = AuthenticatedRouteRouteImport.update({
 const AuthRoute = AuthRouteImport.update({
   id: '/auth',
   path: '/auth',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const PrivacidadRoute = PrivacidadRouteImport.update({
+  id: '/privacidad',
+  path: '/privacidad',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const TerminosRoute = TerminosRouteImport.update({
+  id: '/terminos',
+  path: '/terminos',
   getParentRoute: () => rootRouteImport,
 } as any)
 const AuthenticatedApiRoute = AuthenticatedApiRouteImport.update({
@@ -91,6 +105,16 @@ const AuthenticatedPagosRoute = AuthenticatedPagosRouteImport.update({
   path: '/pagos',
   getParentRoute: () => AuthenticatedRouteRoute,
 } as any)
+const MapaIndexRoute = MapaIndexRouteImport.update({
+  id: '/mapa/',
+  path: '/mapa/',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const MapaIdRoute = MapaIdRouteImport.update({
+  id: '/mapa/$id',
+  path: '/mapa/$id',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const AuthenticatedClientesIndexRoute =
   AuthenticatedClientesIndexRouteImport.update({
     id: '/clientes/',
@@ -136,6 +160,8 @@ const ApiWebhooksPeyRoute = ApiWebhooksPeyRouteImport.update({
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/auth': typeof AuthRoute
+  '/privacidad': typeof PrivacidadRoute
+  '/terminos': typeof TerminosRoute
   '/api': typeof AuthenticatedApiRoute
   '/caja': typeof AuthenticatedCajaRoute
   '/colaboradores': typeof AuthenticatedColaboradoresRoute
@@ -145,6 +171,8 @@ export interface FileRoutesByFullPath {
   '/monedero': typeof AuthenticatedMonederoRoute
   '/negocio': typeof AuthenticatedNegocioRoute
   '/pagos': typeof AuthenticatedPagosRoute
+  '/mapa/$id': typeof MapaIdRoute
+  '/mapa/': typeof MapaIndexRoute
   '/clientes/$id': typeof AuthenticatedClientesIdRoute
   '/red/$id': typeof AuthenticatedRedIdRoute
   '/api/v1/clients': typeof ApiV1ClientsRoute
@@ -157,6 +185,8 @@ export interface FileRoutesByFullPath {
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/auth': typeof AuthRoute
+  '/privacidad': typeof PrivacidadRoute
+  '/terminos': typeof TerminosRoute
   '/api': typeof AuthenticatedApiRoute
   '/caja': typeof AuthenticatedCajaRoute
   '/colaboradores': typeof AuthenticatedColaboradoresRoute
@@ -166,6 +196,8 @@ export interface FileRoutesByTo {
   '/monedero': typeof AuthenticatedMonederoRoute
   '/negocio': typeof AuthenticatedNegocioRoute
   '/pagos': typeof AuthenticatedPagosRoute
+  '/mapa/$id': typeof MapaIdRoute
+  '/mapa': typeof MapaIndexRoute
   '/clientes/$id': typeof AuthenticatedClientesIdRoute
   '/red/$id': typeof AuthenticatedRedIdRoute
   '/api/v1/clients': typeof ApiV1ClientsRoute
@@ -180,6 +212,8 @@ export interface FileRoutesById {
   '/': typeof IndexRoute
   '/_authenticated': typeof AuthenticatedRouteRouteWithChildren
   '/auth': typeof AuthRoute
+  '/privacidad': typeof PrivacidadRoute
+  '/terminos': typeof TerminosRoute
   '/_authenticated/api': typeof AuthenticatedApiRoute
   '/_authenticated/caja': typeof AuthenticatedCajaRoute
   '/_authenticated/colaboradores': typeof AuthenticatedColaboradoresRoute
@@ -189,6 +223,8 @@ export interface FileRoutesById {
   '/_authenticated/monedero': typeof AuthenticatedMonederoRoute
   '/_authenticated/negocio': typeof AuthenticatedNegocioRoute
   '/_authenticated/pagos': typeof AuthenticatedPagosRoute
+  '/mapa/$id': typeof MapaIdRoute
+  '/mapa/': typeof MapaIndexRoute
   '/_authenticated/clientes/$id': typeof AuthenticatedClientesIdRoute
   '/_authenticated/red/$id': typeof AuthenticatedRedIdRoute
   '/api/v1/clients': typeof ApiV1ClientsRoute
@@ -203,6 +239,8 @@ export interface FileRouteTypes {
   fullPaths:
     | '/'
     | '/auth'
+    | '/privacidad'
+    | '/terminos'
     | '/api'
     | '/caja'
     | '/colaboradores'
@@ -212,6 +250,8 @@ export interface FileRouteTypes {
     | '/monedero'
     | '/negocio'
     | '/pagos'
+    | '/mapa/$id'
+    | '/mapa/'
     | '/clientes/$id'
     | '/red/$id'
     | '/api/v1/clients'
@@ -224,6 +264,8 @@ export interface FileRouteTypes {
   to:
     | '/'
     | '/auth'
+    | '/privacidad'
+    | '/terminos'
     | '/api'
     | '/caja'
     | '/colaboradores'
@@ -233,6 +275,8 @@ export interface FileRouteTypes {
     | '/monedero'
     | '/negocio'
     | '/pagos'
+    | '/mapa/$id'
+    | '/mapa'
     | '/clientes/$id'
     | '/red/$id'
     | '/api/v1/clients'
@@ -246,6 +290,8 @@ export interface FileRouteTypes {
     | '/'
     | '/_authenticated'
     | '/auth'
+    | '/privacidad'
+    | '/terminos'
     | '/_authenticated/api'
     | '/_authenticated/caja'
     | '/_authenticated/colaboradores'
@@ -255,6 +301,8 @@ export interface FileRouteTypes {
     | '/_authenticated/monedero'
     | '/_authenticated/negocio'
     | '/_authenticated/pagos'
+    | '/mapa/$id'
+    | '/mapa/'
     | '/_authenticated/clientes/$id'
     | '/_authenticated/red/$id'
     | '/api/v1/clients'
@@ -269,6 +317,10 @@ export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
   AuthenticatedRouteRoute: typeof AuthenticatedRouteRouteWithChildren
   AuthRoute: typeof AuthRoute
+  PrivacidadRoute: typeof PrivacidadRoute
+  TerminosRoute: typeof TerminosRoute
+  MapaIdRoute: typeof MapaIdRoute
+  MapaIndexRoute: typeof MapaIndexRoute
   ApiV1ClientsRoute: typeof ApiV1ClientsRoute
   ApiV1PaymentsRoute: typeof ApiV1PaymentsRoute
   ApiV1TransactionsRoute: typeof ApiV1TransactionsRoute
@@ -296,6 +348,20 @@ declare module '@tanstack/react-router' {
       path: '/auth'
       fullPath: '/auth'
       preLoaderRoute: typeof AuthRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/privacidad': {
+      id: '/privacidad'
+      path: '/privacidad'
+      fullPath: '/privacidad'
+      preLoaderRoute: typeof PrivacidadRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/terminos': {
+      id: '/terminos'
+      path: '/terminos'
+      fullPath: '/terminos'
+      preLoaderRoute: typeof TerminosRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/_authenticated/api': {
@@ -360,6 +426,20 @@ declare module '@tanstack/react-router' {
       fullPath: '/pagos'
       preLoaderRoute: typeof AuthenticatedPagosRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
+    }
+    '/mapa/': {
+      id: '/mapa/'
+      path: '/mapa'
+      fullPath: '/mapa/'
+      preLoaderRoute: typeof MapaIndexRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/mapa/$id': {
+      id: '/mapa/$id'
+      path: '/mapa/$id'
+      fullPath: '/mapa/$id'
+      preLoaderRoute: typeof MapaIdRouteImport
+      parentRoute: typeof rootRouteImport
     }
     '/_authenticated/clientes/': {
       id: '/_authenticated/clientes/'
@@ -459,6 +539,10 @@ const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   AuthenticatedRouteRoute: AuthenticatedRouteRouteWithChildren,
   AuthRoute: AuthRoute,
+  PrivacidadRoute: PrivacidadRoute,
+  TerminosRoute: TerminosRoute,
+  MapaIdRoute: MapaIdRoute,
+  MapaIndexRoute: MapaIndexRoute,
   ApiV1ClientsRoute: ApiV1ClientsRoute,
   ApiV1PaymentsRoute: ApiV1PaymentsRoute,
   ApiV1TransactionsRoute: ApiV1TransactionsRoute,
