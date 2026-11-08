@@ -61,6 +61,17 @@ Así se ha trabajado en este repo; síguela para que los dos trabajemos igual.
 
 ---
 
+## 2026-11-08 · Pulido de la demo (T21–T23, en curso)
+
+- Estado al empezar: todo T1–T20 en `main` (PRs #1–#4), CI verde, video en el release `demo-video-2026-11-08`.
+- **Decisiones de Dylan:** unificar `/clientes` con los clientes de puntos; mostrar puntos redondeados hacia
+  abajo; el pin lo sigue moviendo solo la red; no re-hacer el video.
+- Rama base **`pulido-demo`**. 3 agentes (`agente-14` a `agente-16`): T21 `/clientes` con clientes reales,
+  T22 puntos sin decimales en pantalla, T23 demo sin prefijo "Demo ·" visible + 2 expedientes KYB en revisión +
+  `/red` sin negocios inactivos por defecto. Al terminar: integrar, probar, PR a `main` y merge con CI verde.
+
+---
+
 ## 2026-11-08 · Demo y video terminados (T13–T20) → PR a `main`
 
 **Resultado final:** demo lista en local y video narrado con la voz de Dylan.
