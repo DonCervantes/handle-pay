@@ -104,7 +104,11 @@ function PerfilNegocio() {
                   <ul className="space-y-0.5">
                     {n.horario.map((h, i) => (
                       <li key={i}>
-                        {h.dias && <span className="capitalize">{h.dias}: </span>}
+                        {h.dias && (
+                          <span className="inline-block first-letter:uppercase">
+                            {h.dias}:&nbsp;
+                          </span>
+                        )}
                         {h.horas}
                       </li>
                     ))}

@@ -15,6 +15,7 @@ import { pageMeta } from "@/lib/metadata";
 import { formatDate } from "@/lib/format";
 import { CuentaCobro } from "@/components/cuenta-cobro";
 import { ProgramaPuntos } from "@/components/programa-puntos";
+import { HorarioNegocio } from "@/components/horario-negocio";
 import { ROLES_GERENCIA, tieneRol } from "@/lib/roles";
 import {
   ARCHIVOS_PERMITIDOS,
@@ -83,6 +84,7 @@ function MiNegocio() {
           {negocio && tieneRol(me.role, ROLES_GERENCIA) && (
             <ProgramaPuntos businessId={negocio.id} orgId={me.org_id} />
           )}
+          {negocio && tieneRol(me.role, ROLES_GERENCIA) && <HorarioNegocio negocio={negocio} />}
           <DatosDelNegocio negocio={negocio} orgId={me.org_id} editable={editable} />
           <Documentos
             negocio={negocio}

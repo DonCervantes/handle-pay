@@ -102,6 +102,20 @@ describe("horarioLegible", () => {
     expect(horarioLegible(["8-20"])).toEqual([]);
     expect(horarioLegible("  ")).toEqual([]);
   });
+
+  it("acepta el arreglo ordenado que guarda /negocio", () => {
+    expect(
+      horarioLegible([
+        { dias: "Lunes a sábado", horas: "8:00 a 21:00", desde: 0, hasta: 5 },
+        { dias: "Domingo", horas: "Cerrado" },
+        { dias: "Raro", horas: "" },
+        "suelto",
+      ]),
+    ).toEqual([
+      { dias: "Lunes a sábado", horas: "8:00 a 21:00" },
+      { dias: "Domingo", horas: "Cerrado" },
+    ]);
+  });
 });
 
 describe("filtrarNegocios (HND-051)", () => {

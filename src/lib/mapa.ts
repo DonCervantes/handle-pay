@@ -43,15 +43,25 @@ function textoONulo(v: unknown): string | null {
 
 /**
  * Convierte el horario guardado (jsonb libre) en filas para mostrar.
- * Acepta un texto ("Lun a sáb 8:00-21:00") o un objeto { "lun-sab": "8:00-21:00" }.
- * Cualquier otra forma se ignora.
+ * Acepta un texto ("Lun a sáb 8:00-21:00"), un objeto { "lun-sab": "8:00-21:00" } o el
+ * arreglo [{ dias, horas }] que guarda /negocio (src/lib/horario.ts; arreglo para conservar
+ * el orden de los días). Cualquier otra forma se ignora.
  */
 export function horarioLegible(horario: unknown): { dias: string; horas: string }[] {
   if (typeof horario === "string") {
     const t = horario.trim();
     return t ? [{ dias: "", horas: t }] : [];
   }
-  if (!horario || typeof horario !== "object" || Array.isArray(horario)) return [];
+  if (Array.isArray(horario)) {
+    return horario.flatMap((t: unknown) => {
+      if (!t || typeof t !== "object") return [];
+      const { dias, horas } = t as Record<string, unknown>;
+      return typeof dias === "string" && typeof horas === "string" && horas.trim()
+        ? [{ dias: dias.trim(), horas: horas.trim() }]
+        : [];
+    });
+  }
+  if (!horario || typeof horario !== "object") return [];
   return Object.entries(horario as Record<string, unknown>)
     .filter((e): e is [string, string] => typeof e[1] === "string" && e[1].trim() !== "")
     .map(([dias, horas]) => ({ dias: dias.trim(), horas: horas.trim() }));
