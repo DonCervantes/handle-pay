@@ -209,4 +209,5 @@ Pendiente antes de producción:
 - **HND-114** Rechazo por documento: que la red marque qué documento específico debe corregirse (hoy el rechazo es del expediente completo y el motivo va en la nota).
 - **HND-115** Ajuste manual del pin: cuando Nominatim no encuentra la dirección (o solo ubica el código postal), que la red pueda mover el pin en el mapa.
 - **HND-116** Vencer cobros en la base: hoy un cobro pendiente se muestra "Vencido" en pantalla a los 10 min, pero en la base sigue "pendiente". Un job (pg_cron) que lo marque `expirado`.
+  _Migración lista sin aplicar: `20261108040301_job_vencer_cobros.sql` (prueba `supabase/tests/job_vencer_cobros.sql`)._
 - **HND-117** Comisiones de Pey: registrar la comisión de cada cobro (`amountBreakdown.fee`) como egreso para que el saldo en Handle coincida con lo que llega al banco.
