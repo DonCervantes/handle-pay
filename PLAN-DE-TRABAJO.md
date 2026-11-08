@@ -39,6 +39,19 @@ El historial de lo hecho está en [`BITACORA.md`](BITACORA.md). Contexto complet
 con soporte de Pey, rotación de llaves, publicar dirección de personas físicas en el mapa, privacidad de
 `buscarCliente`.
 
+
+## Tareas — HND-062 Deploy (desde 2026-11-07, rama base `deploy-hnd-062`)
+
+Preparación que no necesita cuentas externas. Lo que sí las necesita (login de Cloudflare, dominio, SMTP,
+webhook en el portal de Pey, pago real, rotar llaves) lo hace Dylan; ver "Fuera del plan".
+
+| ID | Tarea | Ticket | Depende de | Archivos principales |
+|---|---|---|---|---|
+| T9 | CI en GitHub Actions: en cada PR corre Vitest, `tsc`, build y `verificar:bundle`; workflow de deploy a Cloudflare (`wrangler deploy`) **manual** (`workflow_dispatch`) que usa secrets `CLOUDFLARE_API_TOKEN`/`CLOUDFLARE_ACCOUNT_ID` y no corre si faltan | HND-062 | — | `.github/workflows/` |
+| T10 | Scripts de producción **en modo simulación por defecto**: (a) `scripts/supabase-auth-prod.mjs` que con el Management API configura Site URL, Redirect URLs (`https://<dominio>/auth`) y SMTP a partir de variables; (b) `scripts/cloudflare-secrets.mjs` que sube con `wrangler secret put` las variables de servidor desde un `.env.production` (nunca las imprime). Solo aplican con `--aplicar` | HND-062 | — | `scripts/`, `.env.production.example` |
+| T11 | Verificación post-deploy: endpoint `/api/health` (sin datos sensibles), script `scripts/smoke-prod.mjs <url>` que revisa `/`, `/mapa`, `/auth`, `/api/health`, que el webhook de Pey rechace firmas inválidas y que no haya secretos en el JS servido; probarlo contra `wrangler dev` local con webhook firmado de prueba | HND-062 | — | `src/routes/api/`, `scripts/` |
+| T12 | `DEPLOY.md`: runbook paso a paso para Dylan (Cloudflare login/token, dominio, Resend con SPF/DKIM/DMARC, Supabase Auth, webhook de Pey, pago real de $0.01, rotación de llaves, rollback con `wrangler rollback`), enlazando los scripts de T9–T11 | HND-062 | T9–T11 (coordinar nombres) | `DEPLOY.md` |
+
 ## Estado
 
 Se actualiza en `BITACORA.md` cada vez que el coordinador integra una rama.
