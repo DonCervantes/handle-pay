@@ -14,6 +14,8 @@ import { meQuery } from "@/lib/session";
 import { pageMeta } from "@/lib/metadata";
 import { formatDate } from "@/lib/format";
 import { CuentaCobro } from "@/components/cuenta-cobro";
+import { ProgramaPuntos } from "@/components/programa-puntos";
+import { ROLES_GERENCIA, tieneRol } from "@/lib/roles";
 import {
   ARCHIVOS_PERMITIDOS,
   CATEGORIAS,
@@ -77,6 +79,9 @@ function MiNegocio() {
         <div className="min-w-0 space-y-6">
           {negocio?.estado_kyb === "aprobado" && (
             <CuentaCobro titularSugerido={negocio.razon_social ?? negocio.nombre_comercial} />
+          )}
+          {negocio && tieneRol(me.role, ROLES_GERENCIA) && (
+            <ProgramaPuntos businessId={negocio.id} orgId={me.org_id} />
           )}
           <DatosDelNegocio negocio={negocio} orgId={me.org_id} editable={editable} />
           <Documentos

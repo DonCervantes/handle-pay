@@ -3,7 +3,17 @@ import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
 import { useEffect, useState, type FormEvent } from "react";
 import QRCode from "qrcode";
-import { CheckCircle2, FlaskConical, Loader2, QrCode, Smartphone, X } from "lucide-react";
+import {
+  CheckCircle2,
+  FlaskConical,
+  Gift,
+  Loader2,
+  QrCode,
+  Search,
+  Smartphone,
+  UserRound,
+  X,
+} from "lucide-react";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { PageHeader } from "@/components/page-header";
@@ -13,6 +23,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { StatusBadge } from "@/components/status-badge";
 import {
+  buscarCliente,
   cancelarCobro,
   crearCobro,
   estadoCaja,
@@ -21,6 +32,18 @@ import {
 } from "@/lib/cobros.functions";
 import { VIGENCIA_COBRO_SEG, cobroVencido, leerMonto, telefonoValido } from "@/lib/codi";
 import { formatMXN } from "@/lib/format";
+import {
+  NIVELES,
+  cobradoNeto,
+  correoValido,
+  errorCanje,
+  formatPuntos,
+  maximoCanje,
+  puntosGanados,
+  resumenCobro,
+  type Nivel,
+  type ReglaPuntos,
+} from "@/lib/puntos";
 import { meQuery } from "@/lib/session";
 import { ROLES_GERENCIA, tieneRol } from "@/lib/roles";
 import { pageMeta } from "@/lib/metadata";
@@ -35,9 +58,23 @@ type CobroActivo = {
   cobroId: string;
   creadoEn: string;
   qr: string | null;
+  /** Total de la compra. */
   monto: number;
+  /** Descuento por puntos. */
+  descuento: number;
+  /** Lo que el cliente paga por CoDi (monto − descuento). */
+  neto: number;
+  /** Puntos que ganará el cliente identificado al pagar (0 sin cliente o sin programa). */
+  puntosAGanar: number;
+  conCliente: boolean;
   tipo: "qr" | "push";
   telefono?: string;
+};
+
+type ClienteEncontrado = {
+  email: string;
+  regla: ReglaPuntos | null;
+  cliente: { nombre: string | null; nivel: Nivel; saldo: number } | null;
 };
 
 const mensaje = (e: unknown) =>
@@ -129,11 +166,54 @@ function NuevoCobro({ onCreado }: { onCreado: (c: CobroActivo) => void }) {
   const [error, setError] = useState<string | null>(null);
   const valor = leerMonto(monto);
 
+  // HND-042 / HND-043: cliente identificado por correo y puntos que usa.
+  const buscarFn = useServerFn(buscarCliente);
+  const [email, setEmail] = useState("");
+  const [buscando, setBuscando] = useState(false);
+  const [encontrado, setEncontrado] = useState<ClienteEncontrado | null>(null);
+  const [puntosTexto, setPuntosTexto] = useState("");
+  const emailLimpio = email.trim().toLowerCase();
+  // Si cambian el correo después de buscar, la búsqueda anterior ya no aplica.
+  const busqueda = encontrado?.email === emailLimpio ? encontrado : null;
+  const regla = busqueda?.regla ?? null;
+  const cliente = busqueda?.cliente ?? null;
+  const saldo = cliente?.saldo ?? 0;
+  const puedeCanjear = !!cliente && saldo > 0 && !!regla?.activo;
+  const maximo = valor !== null && puedeCanjear ? maximoCanje(valor, regla, saldo) : 0;
+  const puntos = puntosTexto.trim() ? Number(puntosTexto.replace(/[,\s]/g, "")) : 0;
+  const errorPuntos = puedeCanjear ? errorCanje(puntos, maximo) : null;
+  const puntosUsados = puedeCanjear && !errorPuntos ? puntos : 0;
+  const resumen = valor !== null ? resumenCobro(valor, puntosUsados) : null;
+  const aGanar =
+    busqueda && resumen ? puntosGanados(resumen.aCobrar, regla, cliente?.nivel ?? "nuevo") : 0;
+
+  async function buscar() {
+    if (!correoValido(emailLimpio)) return setError("Escribe un correo válido para buscar.");
+    setError(null);
+    setBuscando(true);
+    try {
+      const r = await buscarFn({ data: { email: emailLimpio } });
+      setEncontrado({
+        email: emailLimpio,
+        regla: r.regla,
+        cliente: r.encontrado ? r.cliente : null,
+      });
+      setPuntosTexto("");
+    } catch (err) {
+      toast.error(mensaje(err));
+    } finally {
+      setBuscando(false);
+    }
+  }
+
   async function cobrar(e: FormEvent) {
     e.preventDefault();
     if (valor === null) return setError("Escribe un monto válido (hasta 2 decimales).");
     const tel = tipo === "push" ? telefonoValido(telefono) : null;
     if (tipo === "push" && !tel) return setError("Escribe el celular del cliente a 10 dígitos.");
+    if (emailLimpio && !correoValido(emailLimpio))
+      return setError("Revisa el correo del cliente o déjalo vacío.");
+    if (errorPuntos) return setError(errorPuntos);
     setEnviando(true);
     try {
       const r = await crearFn({
@@ -142,10 +222,12 @@ function NuevoCobro({ onCreado }: { onCreado: (c: CobroActivo) => void }) {
           tipo,
           ...(tel ? { telefono: tel } : {}),
           ...(detalle.trim() ? { detalle: detalle.trim() } : {}),
+          ...(emailLimpio ? { clienteEmail: emailLimpio } : {}),
+          ...(puntosUsados > 0 ? { puntosCanje: puntosUsados } : {}),
           idempotencyKey: crypto.randomUUID(),
         },
       });
-      onCreado({ ...r, monto: valor, tipo, ...(tel ? { telefono: tel } : {}) });
+      onCreado({ ...r, conCliente: !!emailLimpio, tipo, ...(tel ? { telefono: tel } : {}) });
       await qc.invalidateQueries({ queryKey: ["cobros-hoy"] });
     } catch (err) {
       toast.error(mensaje(err));
@@ -244,6 +326,131 @@ function NuevoCobro({ onCreado }: { onCreado: (c: CobroActivo) => void }) {
             />
           </div>
 
+          <fieldset className="space-y-3 rounded-xl border p-4">
+            <legend className="flex items-center gap-1.5 px-1 text-sm font-medium">
+              <UserRound className="size-4" /> Cliente (opcional)
+            </legend>
+            <p className="text-xs text-muted-foreground">
+              Con su correo, el cliente gana puntos y puede usarlos como descuento.
+            </p>
+            <div className="flex gap-2">
+              <Input
+                id="cliente-email"
+                type="email"
+                inputMode="email"
+                autoComplete="off"
+                aria-label="Correo del cliente"
+                value={email}
+                onChange={(e) => {
+                  setEmail(e.target.value);
+                  setError(null);
+                }}
+                onKeyDown={(e) => {
+                  if (e.key === "Enter") {
+                    e.preventDefault();
+                    void buscar();
+                  }
+                }}
+                placeholder="correo@ejemplo.com"
+                maxLength={255}
+              />
+              <Button
+                type="button"
+                variant="outline"
+                disabled={buscando || !emailLimpio}
+                onClick={() => void buscar()}
+              >
+                {buscando ? <Loader2 className="animate-spin" /> : <Search />} Buscar
+              </Button>
+            </div>
+
+            {busqueda && !cliente && (
+              <p className="text-sm text-muted-foreground" role="status">
+                Aún no tiene puntos. Con esta compra queda registrado
+                {regla?.activo ? " y empieza a ganar puntos." : "."}
+              </p>
+            )}
+            {cliente && (
+              <div className="rounded-md bg-muted/50 px-3 py-2 text-sm" role="status">
+                <p className="font-medium">{cliente.nombre ?? emailLimpio}</p>
+                <p className="text-muted-foreground">
+                  Nivel {NIVELES[cliente.nivel].nombre} · Saldo aquí:{" "}
+                  <span className="font-semibold text-foreground">
+                    {formatPuntos(saldo)} puntos
+                  </span>
+                </p>
+              </div>
+            )}
+            {busqueda && !regla?.activo && (
+              <p className="text-xs text-muted-foreground">
+                Este negocio no tiene un programa de puntos activo.
+              </p>
+            )}
+
+            {puedeCanjear && (
+              <div className="space-y-1.5">
+                <Label htmlFor="puntos">Usar puntos</Label>
+                <div className="flex gap-2">
+                  <Input
+                    id="puntos"
+                    inputMode="decimal"
+                    autoComplete="off"
+                    value={puntosTexto}
+                    onChange={(e) => {
+                      setPuntosTexto(e.target.value);
+                      setError(null);
+                    }}
+                    placeholder="0"
+                    aria-invalid={!!errorPuntos}
+                  />
+                  <Button
+                    type="button"
+                    variant="outline"
+                    disabled={maximo <= 0}
+                    onClick={() => setPuntosTexto(String(maximo))}
+                  >
+                    Máximo
+                  </Button>
+                </div>
+                <p
+                  className={cn(
+                    "text-xs",
+                    errorPuntos ? "text-destructive" : "text-muted-foreground",
+                  )}
+                >
+                  {errorPuntos ??
+                    (valor !== null
+                      ? `Puede usar hasta ${formatPuntos(maximo)} puntos (1 punto = $1).`
+                      : "Escribe primero el monto.")}
+                </p>
+              </div>
+            )}
+          </fieldset>
+
+          {resumen && (resumen.descuento > 0 || aGanar > 0) && (
+            <dl className="space-y-1 rounded-xl bg-muted/50 px-4 py-3 text-sm">
+              <div className="flex justify-between">
+                <dt className="text-muted-foreground">Total</dt>
+                <dd className="tabular-nums">{formatMXN(resumen.total)}</dd>
+              </div>
+              {resumen.descuento > 0 && (
+                <div className="flex justify-between">
+                  <dt className="text-muted-foreground">Descuento con puntos</dt>
+                  <dd className="tabular-nums">−{formatMXN(resumen.descuento)}</dd>
+                </div>
+              )}
+              <div className="flex justify-between font-semibold">
+                <dt>A cobrar</dt>
+                <dd className="tabular-nums">{formatMXN(resumen.aCobrar)}</dd>
+              </div>
+              {aGanar > 0 && (
+                <p className="flex items-center gap-1.5 pt-1 text-xs text-success">
+                  <Gift className="size-3.5" /> Ganará {formatPuntos(aGanar)} puntos al pagar.
+                </p>
+              )}
+            </dl>
+          )}
+
           {error && (
             <p className="text-sm text-destructive" role="alert">
               {error}
@@ -251,7 +458,7 @@ function NuevoCobro({ onCreado }: { onCreado: (c: CobroActivo) => void }) {
           )}
           <Button className="h-14 w-full text-lg" disabled={enviando}>
             {enviando && <Loader2 className="animate-spin" />}
-            {valor !== null ? `Cobrar ${formatMXN(valor)}` : "Cobrar"}
+            {resumen ? `Cobrar ${formatMXN(resumen.aCobrar)}` : "Cobrar"}
           </Button>
         </form>
       </CardContent>
@@ -373,7 +580,13 @@ function CobroEnCurso({
       >
         <CheckCircle2 className="size-16 text-success" />
         <p className="text-2xl font-bold">¡Pagado!</p>
-        <p className="text-4xl font-bold tabular-nums">{formatMXN(cobro.monto)}</p>
+        <p className="text-4xl font-bold tabular-nums">{formatMXN(cobro.neto)}</p>
+        <DetallePuntos cobro={cobro} pagado />
+        {cobro.descuento > 0 && (
+          <p className="text-sm text-muted-foreground">
+            Total {formatMXN(cobro.monto)} · descuento con puntos {formatMXN(cobro.descuento)}
+          </p>
+        )}
         <Button className="mt-2 h-12 w-full max-w-xs text-base" onClick={onTerminar}>
           Nuevo cobro
         </Button>
@@ -389,6 +602,10 @@ function CobroEnCurso({
         <p className="text-lg font-semibold">{cancelado ? "Cobro cancelado" : "El cobro venció"}</p>
         <p className="text-sm text-muted-foreground">
           Si el cliente aún quiere pagar, genera un cobro nuevo.
+          {cobro.descuento > 0 &&
+            (cancelado
+              ? " Sus puntos ya le fueron devueltos."
+              : " Sus puntos se le devuelven en cuanto el cobro se cierre.")}
         </p>
         <Button className="h-12 w-full max-w-xs text-base" onClick={onTerminar}>
           Nuevo cobro
@@ -401,7 +618,15 @@ function CobroEnCurso({
   const ss = String(segundos % 60).padStart(2, "0");
   return (
     <Card className="flex flex-col items-center gap-4 p-6 text-center shadow-card">
-      <p className="text-4xl font-bold tabular-nums">{formatMXN(cobro.monto)}</p>
+      <div>
+        <p className="text-4xl font-bold tabular-nums">{formatMXN(cobro.neto)}</p>
+        {cobro.descuento > 0 && (
+          <p className="mt-1 text-sm text-muted-foreground">
+            Total {formatMXN(cobro.monto)} − {formatPuntos(cobro.descuento)} puntos
+          </p>
+        )}
+        <DetallePuntos cobro={cobro} />
+      </div>
       {cobro.tipo === "qr" ? (
         <>
           {imagenQr ? (
@@ -451,6 +676,33 @@ function CobroEnCurso({
   );
 }
 
+/** Puntos que gana (o ganó) el cliente identificado con este cobro. */
+function DetallePuntos({ cobro, pagado = false }: { cobro: CobroActivo; pagado?: boolean }) {
+  // Ya pagado, muestra lo que registró el ledger (si el pago lo subió de nivel, gana más).
+  const ganados = useQuery({
+    queryKey: ["puntos-cobro", cobro.cobroId],
+    enabled: pagado && cobro.conCliente,
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("point_transactions")
+        .select("puntos")
+        .eq("charge_id", cobro.cobroId)
+        .eq("tipo", "acumulacion")
+        .maybeSingle();
+      if (error) throw error;
+      return data ? Number(data.puntos) : null;
+    },
+  });
+  const puntos = pagado ? (ganados.data ?? cobro.puntosAGanar) : cobro.puntosAGanar;
+  if (!cobro.conCliente || puntos <= 0) return null;
+  return (
+    <p className="mt-1 flex items-center justify-center gap-1.5 text-sm text-success">
+      <Gift className="size-4" />
+      {pagado ? "Ganó" : "Ganará"} {formatPuntos(puntos)} puntos
+    </p>
+  );
+}
+
 // -----------------------------------------------------------------------------
 // Cobros de hoy
 // -----------------------------------------------------------------------------
@@ -461,7 +713,7 @@ function CobrosDeHoy() {
     queryFn: async () => {
       const { data, error } = await supabase
         .from("charges")
-        .select("id, monto, tipo, estado, created_at")
+        .select("id, monto, descuento_puntos, tipo, estado, created_at")
         .gte("created_at", inicioDelDia())
         .order("created_at", { ascending: false })
         .limit(50);
@@ -470,9 +722,8 @@ function CobrosDeHoy() {
     },
   });
   const cobros = q.data ?? [];
-  const total = cobros
-    .filter((c) => c.estado === "pagado")
-    .reduce((s, c) => s + Number(c.monto), 0);
+  // Lo cobrado por CoDi: monto − descuento por puntos (igual que Ventas del día).
+  const total = cobradoNeto(cobros);
 
   return (
     <Card className="mt-6 shadow-card">
@@ -496,7 +747,14 @@ function CobrosDeHoy() {
               ) : (
                 <Smartphone className="size-4 text-muted-foreground" />
               )}
-              <span className="flex-1 font-medium tabular-nums">{formatMXN(Number(c.monto))}</span>
+              <span className="flex-1 font-medium tabular-nums">
+                {formatMXN(Number(c.monto) - Number(c.descuento_puntos))}
+                {Number(c.descuento_puntos) > 0 && (
+                  <span className="ml-1.5 text-xs font-normal text-muted-foreground">
+                    ({formatPuntos(Number(c.descuento_puntos))} pts)
+                  </span>
+                )}
+              </span>
               <span className="text-xs text-muted-foreground">
                 {new Date(c.created_at).toLocaleTimeString("es-MX", {
                   hour: "2-digit",

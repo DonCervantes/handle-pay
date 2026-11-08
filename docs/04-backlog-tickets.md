@@ -109,27 +109,29 @@ Ventas del día, # de cobros, ticket promedio, desglose por cajero.
 
 ## FASE 4 — Lealtad / puntos
 
-### HND-040 · Reglas de puntos por negocio `puntos`
+> Implementado y probado con SQL + Vitest. Falta la prueba E2E en navegador en modo `mock` (ver `05-estado-del-proyecto.md` §3).
+
+### ✅ HND-040 · Reglas de puntos por negocio `puntos`
 CRUD de `point_rules` (porcentaje, tope, vigencia).
 **Aceptación:** el dueño define cómo se otorgan puntos.
 
-### HND-041 · Acumular puntos al confirmarse el cobro `puntos`
+### ✅ HND-041 · Acumular puntos al confirmarse el cobro `puntos`
 Al marcar `charge=pagado` con `customer_id`, insertar `point_transaction` de acumulación.
 **Aceptación:** el saldo del cliente sube según la regla.
 
-### HND-042 · Identificar cliente en caja (por email) `puntos` `ui`
+### ✅ HND-042 · Identificar cliente en caja (por email) `puntos` `ui`
 En el cobro, buscar/crear `customer` por email para ligarle los puntos.
 **Aceptación:** se puede cobrar con o sin cliente identificado.
 
-### HND-043 · Canje de puntos como descuento `puntos` `ui`
+### ✅ HND-043 · Canje de puntos como descuento `puntos` `ui`
 Aplicar puntos como descuento en un cobro; registrar `point_transaction` de canje.
 **Aceptación:** el descuento baja el monto y el saldo de puntos.
 
-### HND-044 · Monedero del cliente (panel cliente) `puntos` `ui`
+### ✅ HND-044 · Monedero del cliente (panel cliente) `puntos` `ui`
 Saldo de puntos, historial de movimientos, por negocio.
 **Aceptación:** el cliente ve su saldo calculado del ledger.
 
-### HND-045 · Niveles de cliente (nuevo/confianza/vip) `puntos`
+### ✅ HND-045 · Niveles de cliente (nuevo/confianza/vip) `puntos`
 Reglas que suben el nivel según historial; afectan beneficios.
 **Aceptación:** el nivel cambia automáticamente al cumplir criterios.
 
