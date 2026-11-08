@@ -19,7 +19,11 @@
     },
     {
       "id": "e2-cajero-cobra",
-      "texto": "Ahora entra Beto, el cajero. Él no ve las ventas ni la configuración: llega directo a la caja, pensada para usarse en el celular. Mariana, una clienta de siempre, va a pagar doscientos cincuenta pesos. Beto escribe el monto y elige cobrar con código QR. Para darle sus puntos, la busca por su correo. Ahí está: Mariana López, clienta VIP, con unos ciento cincuenta puntos en esta tienda. Sin tarjeta de lealtad y sin otra app. Mariana quiere usar cincuenta puntos: se descuentan cincuenta pesos y quedan doscientos por cobrar. Beto cobra, y aparece el QR de CoDi. La pantalla ya le dice cuántos puntos va a ganar. Mariana lo escanea con la app de su banco, y el dinero llega directo a la cuenta de Lupita, sin comisión de terminal. En esta demo el pago es simulado; en la vida real, CoDi lo confirma en segundos y la pantalla cambia sola. ¡Pagado! Y Mariana ganó treinta puntos: el diez por ciento, y como es VIP, uno y medio veces más."
+      "texto": "Ahora entra Beto, el cajero. Él no ve las ventas ni la configuración: llega directo a la caja, pensada para usarse en el celular. Mariana, una clienta de siempre, va a pagar doscientos cincuenta pesos. Beto escribe el monto y elige cobrar con código QR. Para darle sus puntos, la busca por su correo. Ahí está: Mariana López, clienta VIP, con unos ciento cincuenta puntos en esta tienda. Sin tarjeta de lealtad y sin otra app. Mariana quiere usar cincuenta puntos: se descuentan cincuenta pesos y quedan doscientos por cobrar. Beto cobra, y aparece el QR de CoDi. La pantalla ya le dice cuántos puntos va a ganar. Mariana lo escanea con la app de su banco, y el dinero llega directo a la cuenta de Lupita, sin comisión de terminal. CoDi confirma el pago en segundos y la pantalla cambia sola. ¡Pagado! Y Mariana ganó treinta puntos: el diez por ciento, y como es VIP, uno y medio veces más."
+    },
+    {
+      "id": "e2b-evidencia-codi",
+      "texto": "Y funciona con dinero real. Con Pey, Handle genera un QR CoDi de verdad; aquí, de un centavo. La app del banco lo reconoce al instante, con el nombre del negocio, el monto y el concepto. Nada de terminal: solo el celular de la clienta y su banco."
     },
     {
       "id": "e3-monedero",

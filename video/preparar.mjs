@@ -10,7 +10,7 @@
 // Lee opcionalmente MEDIA/grabaciones/marcas.json (T18) para saltar el inicio de un clip
 // (`inicio` o `recorteInicio`, en segundos por escena).
 import { copyFileSync, existsSync, linkSync, mkdirSync, rmSync, statSync, writeFileSync } from "node:fs";
-import { basename, join, resolve } from "node:path";
+import { basename, dirname, join, resolve } from "node:path";
 import { deflateSync } from "node:zlib";
 import { banderas, carpetaMedia, contrato, DIR_OUT, DIR_PUBLICO, DIR_VIDEO, leerJson, remotionBin, RUTA_PROPS, sondear } from "./lib.mjs";
 import { ajustarVideo, duracionEscena } from "./src/plan.ts";
@@ -48,7 +48,10 @@ function publicar(origen) {
 }
 
 const faltan = [];
-const escenas = c.escenas.map((e, numero) => {
+// Las escenas intercaladas (con `etiqueta`, p. ej. e2b) no cuentan para "Escena N".
+let siguienteNumero = 0;
+const escenas = c.escenas.map((e) => {
+  const numero = e.etiqueta ? siguienteNumero - 1 : siguienteNumero++;
   const texto = textoDe(e.id);
   let audio = null;
   const rutaAudio = join(media, e.audio);
@@ -78,7 +81,29 @@ const escenas = c.escenas.map((e, numero) => {
       };
     } else faltan.push(rutaVideo);
   }
-  return { id: e.id, numero, titulo: e.titulo, texto, audio, video };
+  // Capturas fijas (T24): solo las versiones limpias de MEDIA, nunca las originales.
+  const imagenes = [];
+  for (const rel of e.imagenes ?? []) {
+    if (rel.includes("originales")) throw new Error(`${e.id}: no se usan capturas originales (${rel}); corre video/evidencias/limpiar.mjs.`);
+    const ruta = join(media, rel);
+    if (!existsSync(ruta)) {
+      faltan.push(ruta);
+      continue;
+    }
+    const s = sondear(ruta);
+    imagenes.push({ src: publicar(ruta), ancho: s.video.ancho, alto: s.video.alto });
+  }
+  return {
+    id: e.id,
+    numero,
+    titulo: e.titulo,
+    ...(e.etiqueta ? { etiqueta: e.etiqueta } : {}),
+    ...(e.rotulo ? { rotulo: e.rotulo } : {}),
+    ...(imagenes.length ? { imagenes } : {}),
+    texto,
+    audio,
+    video,
+  };
 });
 
 if (faltan.length && !b["permitir-faltantes"]) {
@@ -118,12 +143,18 @@ function generarPrueba() {
   mkdirSync(join(dir, "grabaciones"), { recursive: true });
   mkdirSync(join(dir, "narracion"), { recursive: true });
   // Duraciones elegidas para cubrir los tres casos: congelar, acelerar y recortar.
-  const dur = { "e0-gancho": [8, 12], "e1-duena-puntos": [30, 20], "e2-cajero-cobra": [60, 22], "e3-monedero": [10, 14], "e4-mapa-perfil": [21, 16], "e5-red": [12, 15], "e6-cierre": [0, 8] };
+  const dur = { "e0-gancho": [8, 12], "e1-duena-puntos": [30, 20], "e2-cajero-cobra": [60, 22], "e2b-evidencia-codi": [0, 14], "e3-monedero": [10, 14], "e4-mapa-perfil": [21, 16], "e5-red": [12, 15], "e6-cierre": [0, 8] };
   for (const e of contrato().escenas) {
     const [v, a] = dur[e.id] ?? [10, 10];
     const mp3 = join(dir, e.audio);
     if (!existsSync(mp3) || statSync(mp3).size === 0) {
       remotionBin("ffmpeg", ["-y", "-hide_banner", "-loglevel", "error", "-f", "lavfi", "-i", `sine=frequency=330:duration=${a}`, "-c:a", "libmp3lame", "-b:a", "128k", mp3]);
+    }
+    for (const rel of e.imagenes ?? []) {
+      // Capturas sintéticas del tamaño de las del banco (738×1600).
+      const ruta = join(dir, rel);
+      mkdirSync(dirname(ruta), { recursive: true });
+      if (!existsSync(ruta)) writeFileSync(ruta, png(Buffer.alloc(738 * 1600 * 3, 200), 738, 1600));
     }
     if (e.grabacion) {
       const webm = join(dir, e.grabacion);

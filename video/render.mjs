@@ -5,12 +5,14 @@
 //   node render.mjs --salida <ruta.mp4>
 //   node render.mjs --prueba            # → out/prueba.mp4 (con props de `preparar.mjs --prueba`)
 //   node render.mjs --frames 0-299      # solo un tramo (para revisar rápido)
+//   node render.mjs --navegador <ruta>  # otro Chrome (p. ej. un envoltorio con --single-process si el
+//                                       # headless shell no carga la composición dentro de un sandbox)
 import { spawnSync } from "node:child_process";
 import { existsSync, mkdirSync } from "node:fs";
 import { dirname, join, resolve } from "node:path";
 import { banderas, carpetaMedia, DIR_OUT, DIR_VIDEO, RUTA_PROPS } from "./lib.mjs";
 
-const b = banderas(process.argv.slice(2), ["salida", "media", "frames", "concurrencia"]);
+const b = banderas(process.argv.slice(2), ["salida", "media", "frames", "concurrencia", "navegador"]);
 if (!existsSync(RUTA_PROPS)) throw new Error("Primero corre: node preparar.mjs");
 
 const salida = resolve(b.salida ?? (b.prueba ? join(DIR_OUT, "prueba.mp4") : join(carpetaMedia(b.media), "salida", "handle-demo.mp4")));
@@ -30,6 +32,7 @@ const args = [
   "--timeout=120000",
   ...(b.frames ? [`--frames=${b.frames}`] : []),
   ...(b.concurrencia ? [`--concurrency=${b.concurrencia}`] : []),
+  ...(b.navegador ? [`--browser-executable=${resolve(b.navegador)}`] : []),
 ];
 console.log(`Renderizando → ${salida}`);
 const r = spawnSync("npx", args, { cwd: DIR_VIDEO, stdio: "inherit" });
