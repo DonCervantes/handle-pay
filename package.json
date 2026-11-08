@@ -16,7 +16,9 @@
     "format": "prettier --write .",
     "test": "vitest run",
     "test:watch": "vitest",
-    "test:e2e": "playwright test"
+    "test:e2e": "playwright test",
+    "demo:datos": "node --env-file=.env scripts/demo-datos.mjs",
+    "demo:limpiar": "node --env-file=.env scripts/demo-datos.mjs --limpiar"
   },
   "overrides": {
     "rolldown": "1.2.1"
