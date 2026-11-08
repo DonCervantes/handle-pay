@@ -267,13 +267,15 @@ export const crearCobro = createServerFn({ method: "POST" })
     }
 
     // Con la sesión de quien cobra: RLS exige su org, su rol, estado "pendiente" y sin canje.
+    // El cliente lo liga después el servidor (RLS solo deja a la caja poner clientes que ya
+    // son de su negocio, y este puede ser su primera compra).
     const { data: cobro, error } = await context.supabase
       .from("charges")
       .insert({
         business_id: negocio.id,
         org_id: perfil.org_id!,
         cajero_id: context.userId,
-        customer_id: cliente?.id ?? null,
+        customer_id: null,
         monto: data.monto,
         tipo: data.tipo,
         idempotency_key: data.idempotencyKey,
@@ -285,6 +287,20 @@ export const crearCobro = createServerFn({ method: "POST" })
         throw new Error("Este cobro ya se había creado. Revisa la lista de cobros de hoy.");
       console.error("crearCobro", error);
       throw new Error("No pudimos crear el cobro. Intenta de nuevo.");
+    }
+
+    if (cliente) {
+      const { error: errorAsignar } = await db.rpc("asignar_cliente_cobro", {
+        _charge_id: cobro.id,
+        _customer_id: cliente.id,
+      });
+      if (errorAsignar) {
+        console.error("asignar_cliente_cobro", errorAsignar);
+        await cerrarCobro(db, cobro.id, "cancelado").catch((e) =>
+          console.error("cerrar_cobro tras asignar cliente", e),
+        );
+        throw new Error("No pudimos ligar al cliente con el cobro. Intenta de nuevo.");
+      }
     }
 
     // HND-043: reserva los puntos y obtiene lo que se cobra por CoDi (monto − descuento).

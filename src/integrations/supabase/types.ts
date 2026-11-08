@@ -1079,12 +1079,20 @@ export type Database = {
         Args: { _charge_id: string; _puntos: number }
         Returns: number
       }
+      asignar_cliente_cobro: {
+        Args: { _charge_id: string; _customer_id: string }
+        Returns: undefined
+      }
       cerrar_cobro: {
         Args: {
           _charge_id: string
           _estado: Database["public"]["Enums"]["estado_cobro"]
         }
         Returns: Database["public"]["Enums"]["estado_cobro"]
+      }
+      cliente_ligado_a_mi_org: {
+        Args: { _customer_id: string }
+        Returns: boolean
       }
       cliente_por_email: { Args: { _email: string }; Returns: string }
       current_org_id: { Args: never; Returns: string }
