@@ -61,6 +61,17 @@ Así se ha trabajado en este repo; síguela para que los dos trabajemos igual.
 
 ---
 
+## 2026-11-07 · Video: segunda tanda lanzada (T18–T20, en curso)
+
+- Lanzada automáticamente (Dylan lo autorizó y dejó la sesión trabajando sola). 3 agentes (`agente-11` a
+  `agente-13`) sobre `demo-solida`: T18 grabaciones Playwright, T19 narración ElevenLabs con la voz
+  "Dylan speedhack" (presupuesto ≤ 6,000 caracteres, caché por texto), T20 composición con Remotion.
+- Contrato compartido en [`video/escenas.json`](video/escenas.json): 7 escenas (e0 gancho … e6 cierre) basadas en
+  `DEMO.md`. Los archivos pesados van en `video/media/` (ignorado por git); el video final quedará en
+  `video/media/salida/handle-demo.mp4`.
+
+---
+
 ## 2026-11-07 · Demo lista en local: integrados T13, T14, T16 y T17
 
 **Cómo correr la demo:** `npx bun run demo` (red local, imprime URL y QR; `-- --tunel` para URL pública
