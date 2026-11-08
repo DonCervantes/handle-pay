@@ -170,9 +170,10 @@ Incluye reemplazar el logo: hoy apunta al almacén de assets de Lovable (`/__l5e
 Aviso de privacidad (LFPDPPP) y términos (incluye que los puntos no son efectivo).
 **Aceptación:** enlaces legales activos y aceptación registrada.
 
-### HND-005 · Preset de despliegue Cloudflare `setup` `infra`
+### ✅ HND-005 · Preset de despliegue Cloudflare `setup` `infra`
 Configurar preset Cloudflare Workers en TanStack Start/Nitro; pipeline de build. Incluye verificar que ningún secreto (service role, llaves de Pey) quede en el bundle y probar el artefacto en el runtime de Workers.
 **Aceptación:** build de producción genera artefacto compatible con Cloudflare (aún sin deploy público).
+**Hecho (2026-11-07):** preset `cloudflare-module` fijo en `vite.config.ts`, `wrangler.jsonc` (Worker `handle-pay`), MapLibre fuera del bundle de servidor (Worker 0.75 MiB gzip, antes 1.05) y `bun run verificar:bundle` (secretos, MapLibre, tamaño). Probado con `wrangler dev` (workerd): `/`, `/mapa`, `/auth` 200 y el mapa carga en Chromium headless.
 
 ### HND-062 · Deploy a Cloudflare (producción) `infra`
 Desplegar a Cloudflare Workers con variables de producción y Pey real.
