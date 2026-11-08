@@ -208,6 +208,6 @@ Pendiente antes de producción:
 - **HND-112** Asistente IA del negocio (del repo base: categorización y consultas en lenguaje natural).
 - **HND-113** Baja de cuenta y anonimización (LFPDPPP): la bitácora KYB es inmutable y bloquea borrar un negocio revisado o a su revisor. Definir cómo cumplir el derecho de cancelación (anonimizar datos personales conservando la auditoría).
 - **HND-114** Rechazo por documento: que la red marque qué documento específico debe corregirse (hoy el rechazo es del expediente completo y el motivo va en la nota).
-- **HND-115** Ajuste manual del pin: cuando Nominatim no encuentra la dirección (o solo ubica el código postal), que la red pueda mover el pin en el mapa.
+- **HND-115** Ajuste manual del pin: cuando Nominatim no encuentra la dirección (o solo ubica el código postal), que la red pueda mover el pin en el mapa. ✅ Hecho para `admin_red` en `/red/$id` ("Mover pin", server function `moverPin`, T8). El dueño no puede (lo bloquea `guard_business_write`); habilitarlo es decisión pendiente.
 - **HND-116** Vencer cobros en la base: hoy un cobro pendiente se muestra "Vencido" en pantalla a los 10 min, pero en la base sigue "pendiente". Un job (pg_cron) que lo marque `expirado`.
 - **HND-117** Comisiones de Pey: registrar la comisión de cada cobro (`amountBreakdown.fee`) como egreso para que el saldo en Handle coincida con lo que llega al banco.

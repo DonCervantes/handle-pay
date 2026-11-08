@@ -142,7 +142,9 @@ export function MapaNegocios({
 
   return (
     <div className={cn("relative overflow-hidden bg-muted", className)}>
-      <div ref={contenedor} className="absolute inset-0" />
+      {/* h-full y no absolute: maplibre-gl.css (sin @layer) fuerza position: relative en
+          .maplibregl-map y le gana a las utilidades de Tailwind; con absolute el mapa medía 0 px. */}
+      <div ref={contenedor} className="h-full w-full" />
       {!listo && (
         <div className="absolute inset-0 flex items-center justify-center text-sm text-muted-foreground">
           {falla ? "No pudimos cargar el mapa. Revisa tu conexión." : "Cargando mapa…"}
