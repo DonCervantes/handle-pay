@@ -61,6 +61,25 @@ Así se ha trabajado en este repo; síguela para que los dos trabajemos igual.
 
 ---
 
+## 2026-11-07 · Integrado agente-3: T3 (HND-060), T5 (HND-116), T7 (horario)
+
+- **T3 · Landing (HND-060), `3e3a14b`:** landing para changarros en `/` con el copy de `docs/03-landing.md`
+  (hero, beneficios, cómo funciona, FAQ, pie). CTAs a `/auth?modo=crear` y `/mapa`. Logo SVG en `public/`
+  (se borraron los `src/assets/*.asset.json` que apuntaban a Lovable). Pie reutilizable `pie-publico.tsx`.
+  `AGENTS.md` actualizado (sin Stellar, `payments.functions.ts`, `org_wallets`). Playwright 30/30 (móvil y escritorio).
+- **T5 · Job que vence cobros (HND-116), `6a04791`:** migración **sin aplicar**
+  `20261108040301_job_vencer_cobros.sql` (pg_cron cada 5 min → `vencer_cobros_pendientes()`), prueba
+  `supabase/tests/job_vencer_cobros.sql`. Solo se validó sintaxis (sin base). Al aplicarla, el cobro de $0.01
+  de "Tienda Prueba Pey" pasará a `expirado` (si Pey lo reporta después, `registrar_pago_pey` lo concilia).
+- **T7 · Horario del negocio, `eec21b2`:** tarjeta "Horario de atención" en `/negocio` (gerencia), guarda
+  `businesses.horario` como arreglo ordenado; el mapa lo muestra. E2E 9/9 con datos `@e2e`, ya borrados.
+- **Verificación tras integrar:** Vitest 102/102, `tsc` 0 errores, build correcto.
+- **Decisiones para Dylan:** el copy de puntos se ajustó a "solo en el negocio donde los ganaste" (el
+  `03-landing.md` decía "en toda la red"); se quitó "(Definir modelo…)" de "Cuánto cuesta"; "Contacto"
+  fuera del pie hasta tener correo; el logo es un SVG nuevo basado en el favicon (reemplazar si hay oficial).
+
+---
+
 ## 2026-11-07 · Plan de trabajo y 4 agentes en paralelo (en curso)
 
 **Autor:** Dylan (con Claude Code como coordinador)
