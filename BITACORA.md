@@ -10,6 +10,22 @@ rama, qué cambió, cómo se verificó y qué queda pendiente o bloqueado.
 
 ---
 
+## 2026-11-07 · Plan de trabajo y 4 agentes en paralelo (en curso)
+
+**Autor:** Dylan (con Claude Code como coordinador)
+
+- Se creó [`PLAN-DE-TRABAJO.md`](PLAN-DE-TRABAJO.md) con las tareas T1–T8 (E2E con Playwright, seguridad en
+  BD, landing HND-060, legales HND-061, job HND-116, Cloudflare HND-005, horario del negocio, mover pin HND-115)
+  y las reglas: reclamo atómico en `.claude/tablero/`, pruebas verdes obligatorias antes de cada commit,
+  migraciones escritas por agentes pero aplicadas solo por el coordinador.
+- 4 agentes trabajando en ramas `agente-1` a `agente-4` (worktrees en `.claude/worktrees/`, no versionados).
+  El coordinador integra cada rama en `integracion-fase-4-5` tras volver a correr las pruebas.
+- **Migración del mapa (`20261108030000_mapa_publico.sql`): autorizada por Dylan, pendiente de aplicar.**
+  En esta máquina no hay Supabase CLI, `psql` ni contraseña de la base, y la llave secreta no ejecuta SQL.
+  Se necesita un access token personal de Supabase (`SUPABASE_ACCESS_TOKEN` en `.env`) o pegarla en el SQL Editor.
+
+---
+
 ## 2026-11-07 · Fases 4 (puntos) y 5 (mapa) — rama `integracion-fase-4-5`
 
 **Autor:** Dylan (con Claude Code)
