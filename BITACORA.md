@@ -61,6 +61,40 @@ Así se ha trabajado en este repo; síguela para que los dos trabajemos igual.
 
 ---
 
+## 2026-11-07 · HND-062: preparación del deploy terminada (rama `deploy-hnd-062`)
+
+**Decisiones de Dylan:** hosting aún sin decidir (se preparó Cloudflare Workers y se documentó la alternativa
+Lovable); dominio inicial `handle-pay.<cuenta>.workers.dev`; proveedor SMTP se decide después.
+
+- **T9 · CI y deploy manual (agente-5, `4e489ec`):** `.github/workflows/ci.yml` (Vitest, `tsc`, build y
+  `verificar:bundle` en cada PR y push a `main`, sin secretos, `mock`). `.github/workflows/deploy.yml`
+  ("Deploy a Cloudflare", solo manual): modo `simulacion` (por defecto, `wrangler deploy --dry-run`) o
+  `desplegar` (solo desde `main`). Se omite si faltan los secrets `CLOUDFLARE_API_TOKEN`/`CLOUDFLARE_ACCOUNT_ID`
+  o las variables `VITE_SUPABASE_URL`/`VITE_SUPABASE_PUBLISHABLE_KEY`. wrangler fijado a 4.158.0.
+- **T10 · Scripts de producción (agente-7, `7e715ab`):** `bun run prod:auth` (Site URL, Redirect URLs sumadas a
+  las actuales y SMTP vía Management API) y `bun run prod:secretos` (sube 11 variables de servidor desde
+  `.env.production` con `wrangler secret put`, valor por stdin). Simulación por defecto; `--aplicar` actúa,
+  `--comparar` solo lee. Plantilla `.env.production.example`.
+- **T11 · Salud y smoke (agente-6, `984aeb1`):** `GET /api/health` (solo nombres de variables faltantes y modo de
+  pagos, 503 si falta algo, `no-store`) y `bun run smoke:prod -- <url> [--pagos=pey|mock]`: `/`, `/mapa`,
+  `/auth`, `/api/health`, webhook de Pey rechaza firmas inválidas/viejas (401) y GET (405), y ningún JS servido
+  contiene secretos. 11/11 contra `wrangler dev` con Supabase falso.
+- **T12 · `DEPLOY.md` (agente-6, `03cbb91`):** runbook completo: Cloudflare (cuenta, token, GitHub
+  secrets/variables), `.env.production`, orden deploy → secretos, Supabase Auth, SMTP (el remitente necesita
+  dominio propio: `workers.dev` no admite DNS), webhook de Pey, pago real de $0.01, rotación de llaves,
+  `wrangler rollback`, dominio propio opcional y alternativa Lovable.
+- **Coordinador:** conflicto de `package.json` resuelto (scripts de T10 y T11 juntos) y bandera `--sin-smtp` en
+  `prod:auth` para configurar solo las URLs mientras no haya SMTP (hallazgo del agente 6), documentada en `DEPLOY.md`.
+- **Verificación tras integrar:** Vitest 114/114, `tsc` 0 errores, build y `verificar:bundle` OK, `prod:auth -- --sin-smtp` probado en simulación.
+
+**Para publicar (Dylan, siguiendo `DEPLOY.md`):** cuenta de Cloudflare + secrets/variables en GitHub,
+`.env.production`, correr "Deploy a Cloudflare" desde `main`, `prod:secretos`, `prod:auth -- --sin-smtp`,
+`smoke:prod`. Para cerrar HND-062: SMTP con dominio propio, webhook en portal.mipey.mx, pago real de $0.01 y
+rotar llaves. Decisiones abiertas: hosting final, proyecto de Supabase de producción (¿el compartido?) y
+proveedor de teselas del mapa (`tile.openstreetmap.org` no admite tráfico de producción).
+
+---
+
 ## 2026-11-07 · HND-062 Deploy: preparación con agentes (en curso)
 
 - Rama base nueva **`deploy-hnd-062`** (desde `main` tras el PR #1). `PLAN-DE-TRABAJO.md` tiene las tareas

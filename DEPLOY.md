@@ -185,9 +185,11 @@ Configura **Site URL** = `https://handle-pay.<cuenta>.workers.dev` (el valor de
 `REDIRECT_URLS_EXTRA`, p. ej. `http://localhost:8080/auth` para seguir entrando en local) a las
 Redirect URLs **sin borrar las existentes**, y el SMTP del paso 4.
 
-> **Mientras el SMTP no esté decidido:** hoy `prod:auth` exige las variables `SMTP_*` y no avanza sin
-> ellas. Para publicar antes, configura a mano en el dashboard de Supabase → Authentication → URL
-> Configuration la Site URL y la Redirect URL de arriba, y corre `prod:auth` cuando haya SMTP.
+> **Mientras el SMTP no esté decidido:** usa `--sin-smtp`, que solo configura Site URL y Redirect URLs y
+> no pide las variables `SMTP_*`:
+> `npx bun run prod:auth -- --sin-smtp --comparar` y luego `npx bun run prod:auth -- --sin-smtp --aplicar`.
+> Cuando haya proveedor de correo, corre `prod:auth -- --aplicar` sin la bandera. Ojo: sin SMTP propio los
+> magic links solo llegan a miembros del equipo del proyecto Supabase.
 
 Verificar:
 - Dashboard de Supabase → Authentication → URL Configuration y SMTP Settings muestran lo esperado.

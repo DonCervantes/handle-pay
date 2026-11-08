@@ -13,6 +13,7 @@
 //   SMTP_HOST, SMTP_PORT, SMTP_USER, SMTP_PASS, SMTP_REMITENTE, SMTP_NOMBRE_REMITENTE,
 //   SMTP_LIMITE_POR_HORA (opcional).
 // Nunca imprime el token ni la contraseña SMTP.
+// --sin-smtp: no toca el SMTP (solo Site URL y Redirect URLs).
 import { describir, leerArchivoEnv, leerBanderas, ocultar } from "./lib/entorno.mjs";
 
 const API = (process.env.SUPABASE_MANAGEMENT_API ?? "https://api.supabase.com").replace(/\/+$/, "");
@@ -47,10 +48,12 @@ if (!dominio || !/^[a-z0-9.-]+\.[a-z]{2,}$/i.test(dominio))
   errores.push("DOMINIO_PRODUCCION falta o no es un dominio (ej. handle.mx, sin https://).");
 if (/localhost|127\.0\.0\.1/.test(dominio)) errores.push("DOMINIO_PRODUCCION no puede ser localhost.");
 
+// --sin-smtp: configura solo Site URL y Redirect URLs (mientras no haya proveedor de correo).
+const sinSmtp = process.argv.includes("--sin-smtp");
 const OBLIGATORIAS_SMTP = ["SMTP_HOST", "SMTP_PORT", "SMTP_USER", "SMTP_PASS", "SMTP_REMITENTE"];
-for (const n of OBLIGATORIAS_SMTP) if (!v(n)) errores.push(`${n} falta o está vacía.`);
+if (!sinSmtp) for (const n of OBLIGATORIAS_SMTP) if (!v(n)) errores.push(`${n} falta o está vacía.`);
 if (v("SMTP_PORT") && !/^\d+$/.test(v("SMTP_PORT"))) errores.push("SMTP_PORT debe ser un número (465 o 587).");
-if (v("SMTP_REMITENTE") && dominio && !v("SMTP_REMITENTE").toLowerCase().endsWith(`@${dominio.toLowerCase()}`))
+if (!sinSmtp && v("SMTP_REMITENTE") && dominio && !v("SMTP_REMITENTE").toLowerCase().endsWith(`@${dominio.toLowerCase()}`))
   console.warn(
     `Aviso: SMTP_REMITENTE no es del dominio ${dominio}; debe ser un dominio verificado en el proveedor SMTP (SPF/DKIM).`,
   );
@@ -73,7 +76,7 @@ const redirects = [
     .map((s) => s.trim())
     .filter(Boolean),
 ];
-const cambios = {
+const cambios = sinSmtp ? { site_url: siteUrl } : {
   site_url: siteUrl,
   smtp_host: v("SMTP_HOST"),
   smtp_port: v("SMTP_PORT"),
